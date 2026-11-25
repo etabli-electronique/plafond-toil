@@ -1,0 +1,1698 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plafond étoilé – simulateur</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style id="appStyle">
+:root{
+  --bg:#F1F4F8;--surface:#FFFFFF;--ink:#13233A;--muted:#5A6A7F;--line:#D3DBE5;
+  --accent:#12704B;--accent-ink:#FFFFFF;--warm:#9C5A06;--danger:#BF2F37;--chip:#E5EBF2;
+  --stage:#0A1424;--stage-ink:#DCE6F3;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#08101C;--surface:#101C2F;--ink:#E3EAF4;--muted:#93A3B8;--line:#22324A;
+    --accent:#86E6B9;--accent-ink:#06281A;--warm:#FFCB72;--danger:#FF7A7A;--chip:#17263C;
+    --stage:#050B15;--stage-ink:#DCE6F3;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#08101C;--surface:#101C2F;--ink:#E3EAF4;--muted:#93A3B8;--line:#22324A;
+  --accent:#86E6B9;--accent-ink:#06281A;--warm:#FFCB72;--danger:#FF7A7A;--chip:#17263C;
+  --stage:#050B15;--stage-ink:#DCE6F3;color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Sora",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.stage{background:var(--stage);color:var(--stage-ink);padding:18px clamp(12px,3vw,32px) 14px}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;max-width:1400px;margin:0 auto 12px}
+.top h1{margin:0;font-weight:300;font-size:clamp(26px,4vw,40px);letter-spacing:-.02em;line-height:1.05}
+.top p{margin:4px 0 0;color:#9FB0C6;font-size:14px}
+.seg{display:inline-flex;background:#13223A;border-radius:999px;padding:3px}
+.seg button{border:0;background:transparent;color:#B8C6D8;padding:7px 14px;border-radius:999px;cursor:pointer;font-size:14px}
+.seg button[aria-pressed="true"]{background:#E9F3FF;color:#0A1424;font-weight:600}
+.wrap{max-width:1400px;margin:0 auto;overflow:auto;border-radius:6px;-webkit-overflow-scrolling:touch}
+canvas{display:block;touch-action:none;cursor:grab}
+canvas.dragging{cursor:grabbing}
+.stagebar{max-width:1400px;margin:10px auto 0;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:13px;color:#A9B8CB}
+.stagebar label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.tbtn{border:1px solid #2A3D5A;background:#0F1C31;color:#D7E2F0;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px}
+.tbtn:hover{border-color:#4B6890}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:10px;border-radius:2px;display:inline-block}
+.stats{max-width:1400px;margin:10px auto 0;display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:#13223A;border-radius:6px;padding:5px 10px;font-size:13px;color:#D6E1EF}
+.chip b{font-weight:600;color:#fff}
+.chip.bad{background:#4A1820;color:#FFD3D6}
+.chip.good b{color:#9DF0C6}
+.warn{max-width:1400px;margin:8px auto 0;font-size:13px;color:#FFD08A}
+.warn:empty{display:none}
+.sel{max-width:1400px;margin:10px auto 0;background:#101E34;border:1px solid #243856;border-radius:8px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:14px}
+.sel[hidden]{display:none}
+.sel select{background:#0A1526;border:1px solid #2E4566;border-radius:6px;padding:4px 8px;color:#E3EAF4}
+
+main{max-width:1400px;margin:0 auto;padding:16px clamp(12px,3vw,32px) 48px}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.tabs button{border:0;background:none;padding:10px 14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;font-size:14px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.panel{display:none}
+.panel.on{display:block}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.box h3{margin:0 0 10px;font-size:15px;font-weight:600}
+.box p.note{color:var(--muted);font-size:13px;margin:8px 0 0}
+.row{display:grid;grid-template-columns:minmax(110px,1fr) minmax(90px,1.6fr) 74px 26px;gap:8px;align-items:center;margin:6px 0;font-size:14px}
+.row.simple{grid-template-columns:minmax(150px,1.6fr) minmax(80px,1fr) 30px}
+.row em{font-style:normal;color:var(--muted);font-size:12px}
+.num{width:100%;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+select.full,textarea{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px}
+.chk{display:flex;gap:8px;align-items:center;margin:6px 0;cursor:pointer;font-size:14px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:7px 12px;cursor:pointer;font-size:14px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.btn.danger{color:var(--danger)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.item header{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.item header i{color:var(--muted);font-size:13px}
+.item .meta{color:var(--muted);font-size:13px;margin:2px 0 8px}
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.items .item{margin:0}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--muted);font-weight:600}
+td.bad{color:var(--danger);font-weight:600}
+td.ok{color:var(--accent)}
+.tablewrap{overflow-x:auto}
+.sizes input{width:100%;min-width:60px}
+.sizes td{padding:4px}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);max-width:min(900px,94vw)}
+dialog img{max-width:100%}
+.muted{color:var(--muted)}
+.tbtn:disabled{opacity:.4;cursor:default}
+.layers{max-width:1400px;margin:10px auto 0;display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;font-size:13px;color:#D6E1EF}
+.layers label{display:inline-flex;gap:6px;align-items:center;cursor:pointer;background:#13223A;border:1px solid #22344F;padding:4px 10px;border-radius:6px}
+.layers .lbl{color:#8FA2BA;margin-right:4px}
+.layers .cnt{color:#8FA2BA}
+.layers .sep{width:1px;height:20px;background:#2A3D5A;margin:0 4px}
+.seg{flex-wrap:wrap}
+.seg .sep{width:1px;background:#2A3D5A;margin:5px 4px}
+.shapes{display:flex;flex-wrap:wrap;gap:8px}
+.shapes .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+[data-shapeonly][hidden],[data-shapes][hidden]{display:none!important}
+input[type=color]{width:42px;height:28px;padding:0;border:1px solid var(--line);border-radius:6px;background:none}
+[data-pm][hidden]{display:none!important}
+.plist td{padding:3px 4px}
+.plist select{min-width:150px}
+.plist input{width:76px}
+.sheet{margin:10px 0 20px;break-inside:avoid}
+.sheet h4{margin:0 0 6px;font-size:14px}
+.sheet svg{width:100%;height:auto;display:block;background:#F4F6F9;border:1px solid var(--line);border-radius:6px}
+.sheet ul{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--muted)}
+.mat td{white-space:normal}
+@media print{.stage,.tabs,.btns,.panel:not([data-panel="plan"]){display:none!important}.panel[data-panel="plan"]{display:block!important}body{background:#fff;color:#000}.box{border:0}}
+@media (max-width:640px){
+  .row{grid-template-columns:1fr 64px 22px}
+  .row>span{grid-column:1/-1}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="appRoot">
+<noscript><p style="margin:0;padding:16px;background:#FFE8B0;color:#3A2600;font:16px/1.5 system-ui,sans-serif">Ce simulateur a besoin de JavaScript. Sur iPad ou iPhone, l’aperçu de l’app Fichiers ne l’exécute pas : ouvrez la page en ligne dans Safari, ou dans une app capable d’afficher une page web complète.</p></noscript>
+<section class="stage">
+  <div class="top">
+    <div>
+      <h1>Plafond étoilé</h1>
+      <p id="subtitle">Ciel réel vu de La Réunion, posé sur lambris PVC</p>
+    </div>
+    <div class="seg" id="modeSeg" role="group" aria-label="Rendu">
+    </div>
+  </div>
+  <div class="wrap" id="wrap"><canvas id="cv" tabindex="0" aria-label="Plafond simulé"></canvas></div>
+  <div class="stagebar">
+    <button class="tbtn" id="zoomOut" aria-label="Dézoomer">−</button>
+    <span id="zoomVal">100 %</span>
+    <button class="tbtn" id="zoomIn" aria-label="Zoomer">+</button>
+    <label><input type="checkbox" data-k="view.mirror"> Vue de dessus (miroir)</label>
+    <label><input type="checkbox" data-k="view.single"> Déplacer une étoile seule</label>
+    <label><input type="checkbox" data-k="view.addFree"> Ajouter une fibre au clic</label>
+    <button class="tbtn" id="undoBtn" title="Ctrl+Z">Annuler</button>
+    <button class="tbtn" id="redoBtn" title="Ctrl+Y">Rétablir</button>
+    <span class="legend">
+      <span><i class="sw" style="background:#C8955A"></i>Tasseau</span>
+      <span><i class="sw" style="background:#7FA2C8"></i>Panne C</span>
+      <span><i class="sw" style="background:#FFE6AE"></i>Lumière</span>
+      <span><i class="sw" style="background:#9EF2C6"></i>Bande phosphorescente</span>
+      <span><i class="sw" style="background:#CFE0FF"></i>Fibre optique</span>
+      <span><i class="sw" style="background:#FFB14A"></i>Câble</span>
+      <span><i class="sw" style="background:#FF6B6B"></i>Conflit</span>
+    </span>
+  </div>
+  <div class="layers" id="layerBar" role="group" aria-label="Calques des lumières"></div>
+  <div class="stats" id="stats"></div>
+  <div class="warn" id="warn"></div>
+  <div class="sel" id="selBox" hidden="">
+    <strong id="selName"></strong>
+    <span id="selMeta" style="color:#A9B8CB"></span>
+    <label id="selStWrap">Lumière <select id="selSt"></select></label>
+    <label id="selChWrap">Canal <select id="selCh"></select></label>
+    <button class="tbtn" id="selReset">Annuler le décalage manuel</button>
+    <button class="tbtn" id="selDel" hidden="">Supprimer cette étoile</button>
+  </div>
+</section>
+
+<main>
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="const" aria-selected="true">Constellations</button>
+    <button role="tab" data-tab="fibres">Ciel de fibres</button>
+    <button role="tab" data-tab="lum">Lumières</button>
+    <button role="tab" data-tab="chan">Canaux et ambiances</button>
+    <button role="tab" data-tab="struct">Lambris, tasseaux, pannes C</button>
+    <button role="tab" data-tab="table">Table, éclairage, câblage</button>
+    <button role="tab" data-tab="aff">Affichage</button>
+    <button role="tab" data-tab="plan">Plan de perçage</button>
+    <button role="tab" data-tab="save">Sauvegarde</button>
+  </div>
+
+  <!-- Constellations -->
+  <section class="panel on" data-panel="const">
+    <div class="cols" style="margin-bottom:16px">
+      <div class="box">
+        <h3>Ajouter une constellation</h3>
+        <select class="full" id="addSel"></select>
+        <div class="btns"><button class="btn primary" id="addBtn">Ajouter</button></div>
+        <p class="note">Toutes les étoiles proviennent de leurs coordonnées réelles (ascension droite, déclinaison J2000, magnitude). Les formes sont projetées sans déformation ; seuls la taille, la rotation et la position sur le plafond sont réglables. Le tracé des lignes suit les figures usuelles.</p>
+      </div>
+      <div class="box">
+        <h3>Placement</h3>
+        <div class="btns">
+          <button class="btn primary" id="presetBtn">Composition recommandée</button>
+          <button class="btn" id="arrangeBtn">Disposer au centre</button>
+          <button class="btn" id="optBtn">Caler sur la structure</button>
+          <button class="btn" id="clearOffBtn">Annuler les décalages manuels</button>
+        </div>
+        <p class="note" style="margin-top:0">« Composition recommandée » place la Croix du Sud, les Pointeurs, le Triangle Austral, le Scorpion et le Sagittaire à leurs vraies positions les uns par rapport aux autres, traversés par la Voie lactée en fibre optique, comme au-dessus de La Réunion une nuit de juillet. Le bouton Annuler la défait.</p>
+        <label class="row simple"><span>Étendue de la composition (% de la longueur)</span><input type="range" min="25" max="95" step="1" data-k="assign.spread"><output data-o="assign.spread"></output></label>
+        <label class="chk"><input type="checkbox" data-k="sameScale"> Même échelle pour toutes (respecte les tailles relatives du ciel)</label>
+        <p class="note">Cliquez une constellation pour faire apparaître son cadre : l’intérieur la déplace, la poignée ronde la fait pivoter (Maj : par pas de 15°), un coin l’agrandit ou la réduit. Avec Maj enfoncée (ou « Déplacer une étoile seule »), une étoile bouge seule. Au clavier : flèches, Q et E pour pivoter, + et − pour l’échelle.</p>
+        <p class="note">« Caler sur la structure » cherche le petit déplacement de chaque constellation qui évite le mieux tasseaux, pannes C et joints, pour que les étoiles gardent leur forme exacte.</p>
+      </div>
+    </div>
+    <div class="items" id="items"></div>
+  </section>
+
+  <!-- Ciel de fibres -->
+  <section class="panel" data-panel="fibres">
+    <div class="cols">
+      <div class="box" style="grid-column:1/-1">
+        <h3>Forme du ciel de fibres</h3>
+        <div class="shapes" id="shapeSeg"></div>
+        <p class="note" id="shapeDesc"></p>
+      </div>
+      <div class="box">
+        <h3>Tirage</h3>
+        <label class="row simple"><span>Numéro de tirage</span><input type="range" min="0" max="100" step="1" data-k="free.seed"><output data-o="free.seed"></output></label>
+        <div class="btns"><button class="btn" id="seedPrev">◀ Précédent</button><button class="btn" id="seedNext">Suivant ▶</button><button class="btn" id="seedRand">Au hasard</button></div>
+        <p class="note">Un même numéro redonne toujours la même disposition, tant que les autres réglages et les constellations ne changent pas.</p>
+        <h3 style="margin-top:16px">Mes dispositions</h3>
+        <div class="btns"><button class="btn primary" id="favSave">Mémoriser cette disposition</button></div>
+        <div id="favList"></div>
+      </div>
+      <div class="box">
+        <h3>Placement de la forme</h3>
+        <p class="note" id="uniformNote" style="margin-top:0">Le ciel uniforme n’a pas de forme à placer. Choisissez une autre forme pour régler sa position, sa taille et son orientation.</p>
+        <label class="row simple" data-shapeonly><span>Position gauche ↔ droite</span><input type="range" min="0" max="100" step="1" data-k="free.px"><output data-o="free.px"></output></label>
+        <label class="row simple" data-shapeonly><span>Position haut ↔ bas</span><input type="range" min="0" max="100" step="1" data-k="free.py"><output data-o="free.py"></output></label>
+        <label class="row simple" data-shapeonly><span>Taille</span><input type="range" min="10" max="150" step="1" data-k="free.size"><output data-o="free.size"></output></label>
+        <label class="row simple" data-shapeonly><span>Rotation (°)</span><input type="range" min="-180" max="180" step="1" data-k="free.rot"><output data-o="free.rot"></output></label>
+        <label class="row simple" data-shapeonly><span id="detailLbl">Détail</span><input type="range" min="0" max="100" step="1" data-k="free.detail"><output data-o="free.detail"></output></label>
+        <label class="row simple" data-shapes="milky"><span>Courbure</span><input type="range" min="-100" max="100" step="1" data-k="free.curve"><output data-o="free.curve"></output></label>
+        <label class="row simple" data-shapes="galaxy vortex"><span>Inclinaison (°)</span><input type="range" min="0" max="80" step="1" data-k="free.tilt"><output data-o="free.tilt"></output></label>
+        <label class="row simple" data-shapeonly><span>Concentration</span><input type="range" min="0" max="100" step="1" data-k="free.contrast"><output data-o="free.contrast"></output></label>
+        <label class="row simple" data-shapeonly><span>Fond diffus autour (%)</span><input type="range" min="0" max="100" step="1" data-k="free.bg"><output data-o="free.bg"></output></label>
+        <p class="note" data-shapeonly>La position et la taille sont en pourcentage du plafond, vu de dessous.</p>
+      </div>
+      <div class="box">
+        <h3>Où mettre la lumière</h3>
+        <label class="row simple"><span>Murs ↔ centre</span><input type="range" min="-100" max="100" step="5" data-k="free.prio"><output data-o="free.prio"></output></label>
+        <p class="note" id="prioTxt" style="margin-top:0"></p>
+        <label class="row simple"><span>Limiter à</span><select class="num" data-k="free.zone"><option value="all">Tout le plafond</option><option value="out">Tout sauf au-dessus de la table</option><option value="edges">Près des murs seulement</option></select><em></em></label>
+        <label class="row simple"><span>Largeur de la bande murale</span><input class="num" type="number" min="10" max="150" step="1" data-k="free.band"><em>cm</em></label>
+      </div>
+      <div class="box">
+        <h3>Quantité et espacement</h3>
+        <label class="chk"><input type="checkbox" data-k="free.auto"> Utiliser toutes les fibres restantes</label>
+        <label class="row simple"><span>Sinon, nombre de fibres</span><input class="num" type="number" min="0" max="3000" step="1" data-k="free.n"><em></em></label>
+        <label class="row simple"><span>Espacement mini entre fibres</span><input class="num" type="number" min="1" max="100" step="0.5" data-k="free.sp"><em>cm</em></label>
+        <label class="row simple"><span>Distance mini aux constellations</span><input class="num" type="number" min="0" max="100" step="0.5" data-k="free.minD"><em>cm</em></label>
+        <div class="btns"><button class="btn" id="freeFreeze">Figer pour les déplacer une à une</button><button class="btn danger" id="freeClear">Retirer les fibres ajoutées</button></div>
+        <p class="note">Pour poser une fibre précise, cochez « Ajouter une fibre au clic » sous le plafond. Les fibres évitent toujours tasseaux, pannes C et joints.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Lumières -->
+  <section class="panel" data-panel="lum">
+    <div class="cols">
+      <div class="box" style="grid-column:1/-1">
+        <h3>Ampoules LED (COB, spots)</h3>
+        <div class="tablewrap">
+          <table class="sizes">
+            <thead><tr><th>Nom</th><th>Quantité</th><th>Puissance (W)</th><th>Flux lumineux (lm)</th><th>Angle du faisceau (°)</th><th>Température (K)</th><th>Ø de perçage (mm)</th><th>Placées</th><th></th></tr></thead>
+            <tbody id="spotBody"></tbody>
+          </table>
+        </div>
+        <div class="btns"><button class="btn" id="addSize">Ajouter un modèle d’ampoule</button></div>
+        <p class="note">Toutes les ampoules indiquées sont posées. Les plus puissantes vont sur les étoiles les plus brillantes des constellations, puis les suivantes. S’il y a plus d’ampoules que d’étoiles de constellation, celles qui restent deviennent des étoiles de fond (case « Répartition » ci-dessous). Le flux et l’angle servent à estimer l’éclairage de la table : reprenez-les de la fiche technique.</p>
+      </div>
+      <div class="box" style="grid-column:1/-1">
+        <h3>Fibre optique</h3>
+        <div class="tablewrap">
+          <table class="sizes">
+            <thead><tr><th>Nom</th><th>Nombre de brins</th><th>Ø de la fibre (mm)</th><th>Ø de perçage (mm)</th><th>Projecteur (W)</th><th>Flux du projecteur (lm)</th><th>Lumière</th><th>Température (K) ou couleur</th><th>Placées</th><th></th></tr></thead>
+            <tbody id="fibBody"></tbody>
+          </table>
+        </div>
+        <div class="btns"><button class="btn" id="addFib">Ajouter un type de fibre</button></div>
+        <p class="note">Les étoiles de constellation sans ampoule reçoivent une fibre ; les brins restants forment le ciel de fibres (onglet Ciel de fibres). Un type de fibre correspond à un projecteur : tous ses brins ont la même couleur et le même éclat. Seul le diamètre change l’éclat d’un brin, et sa longueur l’atténue légèrement. Pour l’éclairement, l’outil compte qu’environ 35 % du flux du projecteur ressort au bout des fibres (pertes à l’injection dans le faisceau), réparti entre les brins et émis dans un cône d’environ 60°. Sans flux indiqué, il compte environ 60 lm par watt. Cliquez une étoile sur le plafond pour imposer son type.</p>
+      </div>
+      <div class="box">
+        <h3>Répartition</h3>
+        <label class="row simple"><span>Favoriser le centre (0 = brillance seule)</span><input type="range" min="0" max="3" step="0.1" data-k="assign.center"><output data-o="assign.center"></output></label>
+        <label class="chk"><input type="checkbox" data-k="assign.spotFill"> Placer les ampoules sans étoile de constellation en étoiles de fond</label>
+        <label class="chk"><input type="checkbox" data-k="assign.border"> Pas de lumière près des murs</label>
+        <label class="row simple"><span>Bande sans lumière le long des murs</span><input class="num" type="number" min="0" max="80" step="1" data-k="assign.borderCm"><em>cm</em></label>
+        <label class="row simple"><span>Espace mini autour d’un spot</span><input class="num" type="number" min="0" max="30" step="0.5" data-k="assign.gap"><em>cm</em></label>
+        <label class="row simple"><span>Espace mini entre deux fibres</span><input class="num" type="number" min="0" max="20" step="0.1" data-k="assign.fgap"><em>cm</em></label>
+      </div>
+      <div class="box">
+        <h3>Calage automatique</h3>
+        <label class="chk"><input type="checkbox" data-k="assign.snap"> Décaler chaque trou au plus près pour éviter tasseaux, pannes C et joints</label>
+        <label class="chk"><input type="checkbox" data-k="assign.fibThrough"> Autoriser les fibres sous les tasseaux (le tasseau est percé de part en part pour laisser passer la fibre)</label>
+        <p class="note">Le décalage appliqué est affiché dans le plan de perçage. Désactivez-le pour voir les conflits bruts en rouge.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Canaux -->
+  <section class="panel" data-panel="chan">
+    <div class="cols">
+      <div class="box" style="grid-column:1/-1">
+        <h3>Canaux du module (un relais par canal)</h3>
+        <div class="tablewrap"><table><thead><tr><th>N°</th><th>Nom</th><th>Couleur</th><th>Spots</th><th>Fibres</th><th>Puissance</th><th></th></tr></thead><tbody id="chBody"></tbody></table></div>
+        <div class="btns"><button class="btn" id="chAdd">Ajouter un canal</button></div>
+        <p class="note">Chaque lumière est câblée sur un seul canal. Les fibres suivent leur projecteur : pour allumer des fibres séparément, créez un second type de fibre (onglet Lumières) avec son propre projecteur.</p>
+      </div>
+      <div class="box" style="grid-column:1/-1">
+        <h3>Qui va sur quel canal</h3>
+        <div class="tablewrap"><table><thead><tr><th>Ordre</th><th>Quelles lumières</th><th>Précision</th><th>Canal</th><th></th></tr></thead><tbody id="ruleBody"></tbody></table></div>
+        <div class="btns"><button class="btn" id="ruleAdd">Ajouter une règle</button></div>
+        <p class="note">Les règles s’appliquent de haut en bas : une règle plus bas remplace celles du dessus. Pour une lumière précise, cliquez-la sur le plafond et choisissez son canal.</p>
+      </div>
+      <div class="box" style="grid-column:1/-1">
+        <h3>Ambiances</h3>
+        <div class="tablewrap"><table><thead id="scHead"></thead><tbody id="scBody"></tbody></table></div>
+        <div class="btns"><button class="btn" id="scAdd">Ajouter une ambiance</button></div>
+        <p class="note">Une ambiance est une combinaison de canaux allumés, à programmer comme scène dans l’application du module. Ses boutons apparaissent en haut du plafond. « Éteint » correspond à l’interrupteur mural coupé.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Structure -->
+  <section class="panel" data-panel="struct">
+    <div class="cols">
+      <div class="box">
+        <h3>Plafond</h3>
+        <label class="row simple"><span>Longueur (axe X, du mur A)</span><input class="num" type="number" min="100" max="2000" step="1" data-k="room.L"><em>cm</em></label>
+        <label class="row simple"><span>Largeur (axe Y, du mur B)</span><input class="num" type="number" min="100" max="1000" step="1" data-k="room.W"><em>cm</em></label>
+        <label class="row simple"><span>Hauteur sous plafond</span><input class="num" type="number" min="180" max="500" step="1" data-k="room.H"><em>cm</em></label>
+      </div>
+      <div class="box">
+        <h3>Lambris PVC</h3>
+        <label class="row simple"><span>Largeur utile d’une lame</span><input class="num" type="number" min="5" max="100" step="0.5" data-k="panel.w"><em>cm</em></label>
+        <label class="row simple"><span>Décalage de la première lame</span><input class="num" type="number" min="-100" max="100" step="0.5" data-k="panel.off"><em>cm</em></label>
+        <label class="row simple"><span>Sens des lames</span>
+          <select class="num" data-k="panel.dir"><option value="y">Dans la largeur (lames de 2,30 m)</option><option value="x">Dans la longueur</option></select><em></em></label>
+        <label class="chk"><input type="checkbox" data-k="panel.avoid"> Ne pas percer sur un joint de lames</label>
+        <label class="row simple"><span>Marge au joint</span><input class="num" type="number" min="0" max="10" step="0.5" data-k="panel.margin"><em>cm</em></label>
+        <p class="note" id="panelInfo"></p>
+      </div>
+      <div class="box">
+        <h3>Tasseaux</h3>
+        <label class="chk"><input type="checkbox" data-k="batt.show"> Afficher</label>
+        <label class="row simple"><span>Répartition</span>
+          <select class="num" data-k="batt.mode"><option value="auto">Nombre réparti mur à mur</option><option value="e">Entraxe imposé</option></select><em></em></label>
+        <label class="row simple"><span>Nombre (dont 2 le long des murs)</span><input class="num" type="number" min="2" max="60" step="1" data-k="batt.n"><em></em></label>
+        <label class="row simple"><span>Entraxe imposé</span><input class="num" type="number" min="5" max="200" step="0.5" data-k="batt.e"><em>cm</em></label>
+        <label class="row simple"><span>Largeur vue de dessous</span><input class="num" type="number" min="1" max="15" step="0.1" data-k="batt.w"><em>cm</em></label>
+        <label class="row simple"><span>Marge autour</span><input class="num" type="number" min="0" max="10" step="0.5" data-k="batt.margin"><em>cm</em></label>
+        <label class="row simple"><span>Transparence</span><input type="range" min="0.05" max="1" step="0.05" data-k="batt.op"><output data-o="batt.op"></output></label>
+        <p class="note" id="battInfo"></p>
+      </div>
+      <div class="box">
+        <h3>Pannes C</h3>
+        <label class="chk"><input type="checkbox" data-k="purl.use"> Prendre en compte pour le perçage</label>
+        <label class="chk"><input type="checkbox" data-k="purl.show"> Afficher</label>
+        <label class="row simple"><span>Répartition</span>
+          <select class="num" data-k="purl.mode"><option value="auto">Nombre réparti</option><option value="e">Première + entraxe</option><option value="list">Une par une (pannes déjà posées)</option></select><em></em></label>
+        <div data-pm="list">
+          <p class="note" id="purlListHelp" style="margin-top:4px"></p>
+          <div class="tablewrap"><table class="plist"><thead><tr><th>Panne</th><th>Mesurée depuis</th><th>Mur → bord (cm)</th><th>Largeur (cm)</th><th></th></tr></thead><tbody id="purlList"></tbody></table></div>
+          <div class="btns"><button class="btn" id="purlAdd">Ajouter une panne</button></div>
+        </div>
+        <label class="row simple" data-pm="auto e"><span>Nombre</span><input class="num" type="number" min="0" max="40" step="1" data-k="purl.n"><em></em></label>
+        <label class="row simple" data-pm="e"><span>Axe de la première</span><input class="num" type="number" min="0" max="2000" step="0.5" data-k="purl.first"><em>cm</em></label>
+        <label class="row simple" data-pm="e"><span>Entraxe</span><input class="num" type="number" min="10" max="600" step="0.5" data-k="purl.e"><em>cm</em></label>
+        <label class="row simple" data-pm="auto e"><span>Largeur de l’aile</span><input class="num" type="number" min="1" max="30" step="0.5" data-k="purl.w"><em>cm</em></label>
+        <label class="row simple"><span>Marge autour</span><input class="num" type="number" min="0" max="20" step="0.5" data-k="purl.margin"><em>cm</em></label>
+        <label class="row simple"><span>Transparence</span><input type="range" min="0.05" max="1" step="0.05" data-k="purl.op"><output data-o="purl.op"></output></label>
+        <p class="note" id="purlInfo"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Table -->
+  <section class="panel" data-panel="table">
+    <div class="cols">
+      <div class="box">
+        <h3>Table sous le plafond</h3>
+        <label class="chk"><input type="checkbox" data-k="table.show"> Afficher la table</label>
+        <label class="row simple"><span>Longueur (sens X)</span><input class="num" type="number" min="40" max="600" step="1" data-k="table.len"><em>cm</em></label>
+        <label class="row simple"><span>Largeur (sens Y)</span><input class="num" type="number" min="40" max="300" step="1" data-k="table.wid"><em>cm</em></label>
+        <label class="row simple"><span>Centre en X</span><input class="num" type="number" min="0" max="2000" step="1" data-k="table.cx"><em>cm</em></label>
+        <label class="row simple"><span>Centre en Y</span><input class="num" type="number" min="0" max="1000" step="1" data-k="table.cy"><em>cm</em></label>
+        <label class="row simple"><span>Hauteur du plateau</span><input class="num" type="number" min="30" max="120" step="1" data-k="table.h"><em>cm</em></label>
+        <div class="btns"><button class="btn" id="centerTable">Centrer la table</button></div>
+      </div>
+      <div class="box">
+        <h3>Éclairement estimé</h3>
+        <label class="chk"><input type="checkbox" data-k="view.heat"> Afficher la carte d’éclairement au niveau du plateau</label>
+        <p id="luxInfo"></p>
+        <p class="note">Estimation simple à partir du flux et de l’angle de chaque taille (loi du cosinus). Pour un repas, on vise souvent 150 à 300 lux sur la table. Échelle de la carte : 0 à 400 lux.</p>
+      </div>
+      <div class="box">
+        <h3>Câblage indicatif</h3>
+        <label class="chk"><input type="checkbox" data-k="view.cable"> Afficher le tracé (le carré orange se déplace à la souris)</label>
+        <label class="row simple"><span>Arrivée électrique, X</span><input class="num" type="number" min="0" max="2000" step="1" data-k="elec.x"><em>cm</em></label>
+        <label class="row simple"><span>Arrivée électrique, Y</span><input class="num" type="number" min="0" max="1000" step="1" data-k="elec.y"><em>cm</em></label>
+        <label class="row simple"><span>Mou par lumière</span><input class="num" type="number" min="0" max="100" step="1" data-k="elec.slack"><em>cm</em></label>
+        <p id="cableInfo"></p>
+        <p class="note">Tracé le plus court reliant tous les spots en suivant le sens des tasseaux. Il sert à estimer la longueur de câble et les passages à entailler ; le choix de l’alimentation et du montage reste à l’électricien.</p>
+      </div>
+      <div class="box">
+        <h3>Fibre optique</h3>
+        <label class="chk"><input type="checkbox" data-k="view.fibroute"> Afficher les trajets (le rond bleu se déplace à la souris)</label>
+        <label class="row simple"><span>Projecteur, X</span><input class="num" type="number" min="0" max="2000" step="1" data-k="fib.x"><em>cm</em></label>
+        <label class="row simple"><span>Projecteur, Y</span><input class="num" type="number" min="0" max="1000" step="1" data-k="fib.y"><em>cm</em></label>
+        <label class="row simple"><span>Surlongueur par brin</span><input class="num" type="number" min="0" max="300" step="1" data-k="fib.slack"><em>cm</em></label>
+        <label class="row simple"><span>Brins par projecteur</span><input class="num" type="number" min="10" max="2000" step="10" data-k="fib.per"><em></em></label>
+        <p id="fibInfo"></p>
+        <p class="note">Chaque brin part du projecteur et suit le sens des tasseaux jusqu’à son trou. Les kits sont vendus par longueur de brin : prenez une longueur au moins égale au brin le plus long.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Affichage -->
+  <section class="panel" data-panel="aff">
+    <div class="cols">
+      <div class="box">
+        <h3>Éléments visibles</h3>
+        <label class="chk"><input type="checkbox" data-k="view.lines"> Bandes phosphorescentes (lignes des constellations)</label>
+        <label class="row simple"><span>Étoiles sans lumière</span><select class="num" data-k="view.unlit"><option value="hide">Masquées</option><option value="show">Repère en pointillé (non percé)</option></select><em></em></label>
+        <label class="chk"><input type="checkbox" data-k="view.chcol"> Couleur des canaux sur le plan de pose</label>
+        <label class="row simple"><span>Largeur de bande</span><input class="num" type="number" min="0.2" max="5" step="0.1" data-k="view.strip"><em>cm</em></label>
+        <label class="chk"><input type="checkbox" data-k="view.cnames"> Noms des constellations</label>
+        <label class="chk"><input type="checkbox" data-k="view.names"> Noms des étoiles</label>
+        <label class="chk"><input type="checkbox" data-k="view.nums"> Numéros des lames et des trous</label>
+        <label class="chk"><input type="checkbox" data-k="view.dims"> Cotes et murs</label>
+      </div>
+      <div class="box">
+        <h3>Orientation</h3>
+        <p class="note" style="margin-top:0">La vue normale est celle de quelqu’un assis à table qui lève la tête : le nord céleste en haut, l’est à gauche, comme sur une carte du ciel tenue au-dessus de soi. La vue de dessus sert si vous tracez au dos des lames.</p>
+        <p class="note">Depuis La Réunion, les constellations « du nord » (Orion, le Lion…) apparaissent tête en bas quand on regarde vers le nord : une rotation de 180° les montre comme vous les voyez dehors.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Plan -->
+  <section class="panel" data-panel="plan">
+    <div class="box">
+      <h3>Plan de perçage</h3>
+      <p class="note" style="margin-top:0" id="planNote"></p>
+      <div class="btns">
+        <button class="btn primary" id="csvBtn">Télécharger le tableau (.csv)</button>
+        <button class="btn" id="pngBtn">Télécharger le plan (.png)</button>
+        <button class="btn" id="copyBtn">Copier le tableau</button>
+        <button class="btn" id="printBtn">Imprimer les fiches</button>
+      </div>
+      <div class="tablewrap" id="planTable"></div>
+      <h3 style="margin-top:22px">Liste de matériel</h3>
+      <div class="tablewrap" id="matTable"></div>
+      <h3 style="margin-top:22px">Fiches par lame</h3>
+      <p class="note" style="margin-top:0">Chaque lame vue de dessous, avec ses trous, les tasseaux (bois) et les pannes C (bleu) qui passent au-dessus.</p>
+      <div id="sheets"></div>
+    </div>
+  </section>
+
+  <!-- Sauvegarde -->
+  <section class="panel" data-panel="save">
+    <div class="cols">
+      <div class="box">
+        <h3>Configuration</h3>
+        <p class="note" style="margin-top:0">Vos réglages sont gardés dans ce navigateur. Pour les transférer, téléchargez-les ou copiez le texte ci-dessous.</p>
+        <div class="btns">
+          <button class="btn primary" id="jsonBtn">Télécharger (.json)</button>
+          <button class="btn" id="htmlBtn">Télécharger le simulateur avec ces réglages (.html)</button>
+          <label class="btn">Importer un fichier<input type="file" id="jsonFile" accept=".json,application/json" hidden=""></label>
+        </div>
+        <textarea id="jsonTxt" rows="6" spellcheck="false" placeholder="Collez ici une configuration"></textarea>
+        <div class="btns">
+          <button class="btn" id="jsonShow">Afficher la configuration actuelle</button>
+          <button class="btn" id="jsonLoad">Charger ce texte</button>
+          <button class="btn danger" id="resetAll">Tout réinitialiser</button>
+        </div>
+        <p class="note" id="saveMsg"></p>
+        <p class="note">Le fichier .html fonctionne seul, sans internet, sur ordinateur (double-clic). Il démarre sur les réglages du moment où il a été téléchargé.</p>
+      </div>
+      <div class="box">
+        <h3>Version partagée</h3>
+        <p class="note" style="margin-top:0" id="shareInfo"></p>
+        <div class="btns"><button class="btn primary" id="sharePub">Enregistrer dans la page partagée</button><button class="btn" id="shareBack">Revenir à la version partagée</button></div>
+        <p class="note">Toute personne qui ouvre le lien démarre sur la version enregistrée. Ses essais restent sur son appareil ; pour vous les transmettre, elle télécharge le fichier .json et vous l’envoie.</p>
+        <p class="note" id="shareMsg"></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg"><div id="dlgBody"></div><div class="btns"><button class="btn" id="dlgClose">Fermer</button></div></dialog>
+</div>
+<script id="seed" type="application/json">{"rev":"2026-11-05T07:12:52.646Z","state":{"room":{"L":600,"W":230,"H":220},"panel":{"w":37.5,"off":0,"dir":"y","avoid":true,"margin":1},"batt":{"show":true,"mode":"auto","n":10,"e":25,"w":4.5,"margin":1,"op":0.25},"purl":{"use":true,"show":true,"mode":"auto","n":3,"first":75,"e":150,"w":6,"margin":2,"op":1},"sizes":[{"name":"Taille 1","n":30,"d":3,"lm":80,"beam":60},{"name":"Taille 2","n":30,"d":5,"lm":200,"beam":60}],"assign":{"center":1,"border":true,"borderCm":25,"gap":3,"snap":true,"spread":65},"table":{"show":true,"len":250,"wid":120,"cx":300,"cy":115,"h":75},"free":{"n":0,"zone":"edges","band":45,"minD":25,"lit":false,"seed":1,"manual":[{"id":"mw2rdiy4408","x":549.5,"y":214},{"id":"mw2rdjqmfob","x":152.5,"y":218.5},{"id":"mw2rdki4dm7","x":33.5,"y":160.5},{"id":"mw2rdl5lqpp","x":131,"y":140},{"id":"mw2rdlpvoe4","x":93.5,"y":191},{"id":"mw2rdmgkm2a","x":44.5,"y":91.5},{"id":"mw2rdnjx4x5","x":548,"y":36.5},{"id":"mw2rdnulevu","x":454,"y":4},{"id":"mw2rdoly5u5","x":570.5,"y":138.5},{"id":"mw2rdphfhv3","x":305.5,"y":218},{"id":"mw2rdq84u00","x":286.5,"y":172},{"id":"mw2rdrk26qj","x":452,"y":197.5},{"id":"mw2rdrwrcx3","x":450.5,"y":223},{"id":"mw2rdsj1o9y","x":445,"y":23},{"id":"mw2rdt0vsre","x":281,"y":17},{"id":"mw2rdtf1tdg","x":160.5,"y":16.5},{"id":"mw2rdtx4ofz","x":38.5,"y":15.5},{"id":"mw2rduorvvm","x":35.5,"y":64}]},"elec":{"x":5,"y":115,"slack":20},"view":{"mode":"off","mirror":false,"single":true,"lines":true,"strip":1,"cnames":false,"names":false,"nums":true,"dims":true,"heat":false,"zoom":1,"addFree":false,"cable":false},"sameScale":true,"items":[{"id":"cmw2lrwa4","key":"south_region","x":127,"y":52,"s":5,"r":-154,"vis":true},{"id":"cmw2lsq78","key":"sagittarius","x":315,"y":63,"s":5,"r":-45,"vis":true},{"id":"cmw2ltbz9","key":"leo","x":422.5,"y":122.5,"s":5,"r":-29,"vis":true},{"id":"cmw2ra3xy","key":"scorpius","x":261,"y":129,"s":5,"r":40,"vis":true}],"ov":{"g:21":{"dx":-12,"dy":-3.5},"g:14":{"dx":-29,"dy":8},"g:5":{"dx":468,"dy":45.5}}}}</script>
+<script id="appScript">
+"use strict";
+const PRISTINE={root:document.getElementById("appRoot").innerHTML,style:document.getElementById("appStyle").textContent,script:document.getElementById("appScript").textContent};
+let SEED=null;try{SEED=JSON.parse(document.getElementById("seed").textContent);}catch(e){SEED=null;}
+/* ================= Données stellaires (J2000 : AD en heures, Déc en degrés, magnitude V) ================= */
+const CAT = {
+  south_region:{name:"Ciel austral : Croix du Sud, Pointeurs et Triangle Austral",latin:"Crux, α/β Centauri, Triangulum Australe",
+    stars:[["Acrux (α Cru)",12.4433,-63.099,0.76],["Mimosa (β Cru)",12.7954,-59.689,1.25],["Gacrux (γ Cru)",12.5194,-57.113,1.64],["Imai (δ Cru)",12.2524,-58.749,2.79],["Ginan (ε Cru)",12.3560,-60.401,3.59],
+      ["Rigil Kentaurus (α Cen)",14.6600,-60.835,-0.27],["Hadar (β Cen)",14.0637,-60.373,0.61],
+      ["Atria (α TrA)",16.8111,-69.028,1.91],["β TrA",15.9190,-63.431,2.85],["γ TrA",15.3152,-68.679,2.87]],
+    lines:[[2,0],[1,3],[5,6],[7,8],[8,9],[9,7]]},
+  crux_pointers:{name:"Croix du Sud et Pointeurs",latin:"Crux + α/β Centauri",
+    stars:[["Acrux (α Cru)",12.4433,-63.099,0.76],["Mimosa (β Cru)",12.7954,-59.689,1.25],["Gacrux (γ Cru)",12.5194,-57.113,1.64],["Imai (δ Cru)",12.2524,-58.749,2.79],["Ginan (ε Cru)",12.3560,-60.401,3.59],
+      ["Rigil Kentaurus (α Cen)",14.6600,-60.835,-0.27],["Hadar (β Cen)",14.0637,-60.373,0.61]],
+    lines:[[2,0],[1,3],[5,6]]},
+  crux:{name:"Croix du Sud",latin:"Crux",
+    stars:[["Acrux (α Cru)",12.4433,-63.099,0.76],["Mimosa (β Cru)",12.7954,-59.689,1.25],["Gacrux (γ Cru)",12.5194,-57.113,1.64],["Imai (δ Cru)",12.2524,-58.749,2.79],["Ginan (ε Cru)",12.3560,-60.401,3.59]],
+    lines:[[2,0],[1,3]]},
+  triangulum:{name:"Triangle Austral",latin:"Triangulum Australe",
+    stars:[["Atria (α TrA)",16.8111,-69.028,1.91],["β TrA",15.9190,-63.431,2.85],["γ TrA",15.3152,-68.679,2.87]],
+    lines:[[0,1],[1,2],[2,0]]},
+  canis_major:{name:"Grand Chien",latin:"Canis Major",
+    stars:[["Sirius (α CMa)",6.7525,-16.716,-1.46],["Mirzam (β CMa)",6.3783,-17.956,1.98],["Wezen (δ CMa)",7.1399,-26.393,1.83],["Adhara (ε CMa)",6.9771,-28.972,1.50],["Aludra (η CMa)",7.4016,-29.303,2.45],["Furud (ζ CMa)",6.3386,-30.063,3.02],["ο² CMa",7.0504,-23.833,3.02],["Muliphein (γ CMa)",7.0626,-15.633,4.11],["ι CMa",6.9356,-17.054,4.37]],
+    lines:[[1,0],[0,8],[8,7],[0,6],[6,2],[2,4],[2,3],[3,5]]},
+  scorpius:{name:"Scorpion",latin:"Scorpius",
+    stars:[["Antarès (α Sco)",16.4901,-26.432,1.06],["Al Niyat (σ Sco)",16.3531,-25.593,2.88],["Paikauhale (τ Sco)",16.5981,-28.216,2.82],["Acrab (β Sco)",16.0906,-19.805,2.62],["Dschubba (δ Sco)",16.0056,-22.622,2.29],["Fang (π Sco)",15.9809,-26.114,2.89],
+      ["Larawag (ε Sco)",16.8362,-34.293,2.29],["Xamidimura (μ¹ Sco)",16.8645,-38.048,3.00],["ζ² Sco",16.9097,-42.361,3.62],["η Sco",17.2026,-43.239,3.33],["Sargas (θ Sco)",17.6220,-42.998,1.87],["ι¹ Sco",17.7931,-40.127,3.03],["Girtab (κ Sco)",17.7081,-39.030,2.39],["Shaula (λ Sco)",17.5601,-37.104,1.62],["Lesath (υ Sco)",17.5127,-37.296,2.70]],
+    lines:[[3,4],[4,5],[4,1],[1,0],[0,2],[2,6],[6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,13],[13,14]]},
+  sagittarius:{name:"Sagittaire (la Théière)",latin:"Sagittarius",
+    stars:[["Kaus Australis (ε Sgr)",18.4029,-34.385,1.85],["Kaus Media (δ Sgr)",18.3499,-29.828,2.70],["Kaus Borealis (λ Sgr)",18.4662,-25.422,2.81],["Nunki (σ Sgr)",18.9211,-26.297,2.05],["Ascella (ζ Sgr)",19.0435,-29.880,2.60],["φ Sgr",18.7609,-26.991,3.17],["τ Sgr",19.1157,-27.670,3.32],["Alnasl (γ² Sgr)",18.0968,-30.424,2.98]],
+    lines:[[1,0],[0,4],[4,5],[5,1],[1,2],[2,5],[5,3],[3,6],[6,4],[7,1],[7,0]]},
+  leo:{name:"Lion",latin:"Leo",
+    stars:[["Régulus (α Leo)",10.1395,11.967,1.35],["Dénébola (β Leo)",11.8177,14.572,2.13],["Algieba (γ Leo)",10.3329,19.841,2.08],["Zosma (δ Leo)",11.2351,20.524,2.56],["Chertan (θ Leo)",11.2373,15.429,3.33],["Adhafera (ζ Leo)",10.2782,23.417,3.44],["Rasalas (μ Leo)",9.8794,26.007,3.88],["Algenubi (ε Leo)",9.7642,23.774,2.98],["η Leo",10.1222,16.763,3.49]],
+    lines:[[0,8],[8,2],[2,5],[5,6],[6,7],[2,3],[3,1],[1,4],[4,3],[4,0]]},
+  taurus:{name:"Taureau",latin:"Taurus",
+    stars:[["Aldébaran (α Tau)",4.5987,16.509,0.86],["Elnath (β Tau)",5.4382,28.608,1.65],["Tianguan (ζ Tau)",5.6274,21.143,3.00],["Chamukuy (θ² Tau)",4.4777,15.871,3.40],["Prima Hyadum (γ Tau)",4.3299,15.628,3.65],["Secunda Hyadum (δ¹ Tau)",4.3822,17.543,3.76],["Ain (ε Tau)",4.4769,19.180,3.53]],
+    lines:[[2,0],[0,3],[3,4],[4,5],[5,6],[6,1]]},
+  gemini:{name:"Gémeaux",latin:"Gemini",
+    stars:[["Castor (α Gem)",7.5767,31.888,1.58],["Pollux (β Gem)",7.7553,28.026,1.14],["Alhena (γ Gem)",6.6285,16.399,1.92],["Tejat (μ Gem)",6.3827,22.514,2.88],["Mebsuta (ε Gem)",6.7322,25.131,3.06],["Wasat (δ Gem)",7.3354,21.982,3.53],["Propus (η Gem)",6.2480,22.507,3.31],["Mekbuda (ζ Gem)",7.0685,20.570,3.79],["τ Gem",7.1857,30.245,4.41]],
+    lines:[[0,1],[0,8],[8,4],[4,3],[3,6],[1,5],[5,7],[7,2]]},
+  orion:{name:"Orion",latin:"Orion",
+    stars:[["Bételgeuse (α Ori)",5.9195,7.407,0.50],["Rigel (β Ori)",5.2423,-8.202,0.13],["Bellatrix (γ Ori)",5.4189,6.350,1.64],["Mintaka (δ Ori)",5.5334,-0.299,2.23],["Alnilam (ε Ori)",5.6036,-1.202,1.69],["Alnitak (ζ Ori)",5.6793,-1.943,1.77],["Saïph (κ Ori)",5.7959,-9.670,2.09],["Meissa (λ Ori)",5.5856,9.934,3.39]],
+    lines:[[0,7],[7,2],[0,5],[2,3],[3,4],[4,5],[5,6],[3,1]]},
+  pleiades:{name:"Pléiades",latin:"M45, dans le Taureau",
+    stars:[["Alcyone (η Tau)",3.7914,24.105,2.87],["Atlas",3.8194,24.053,3.62],["Électre",3.7479,24.113,3.70],["Maïa",3.7638,24.368,3.87],["Mérope",3.7721,23.948,4.18],["Taygète",3.7535,24.467,4.30],["Pléioné",3.8198,24.137,5.05],["Céléno",3.7467,24.290,5.45]],
+    lines:[]},
+  aquila:{name:"Aigle",latin:"Aquila",
+    stars:[["Altaïr (α Aql)",19.8464,8.868,0.76],["Tarazed (γ Aql)",19.7710,10.613,2.72],["Alshain (β Aql)",19.9219,6.407,3.71],["Okab (ζ Aql)",19.0902,13.863,2.99],["δ Aql",19.4250,3.115,3.36],["λ Aql",19.1041,-4.883,3.43],["θ Aql",20.1884,-0.821,3.26],["η Aql",19.8746,1.006,3.87]],
+    lines:[[1,0],[0,2],[0,4],[4,5],[4,3],[2,7],[7,6]]},
+  cygnus:{name:"Cygne (Croix du Nord)",latin:"Cygnus",
+    stars:[["Deneb (α Cyg)",20.6905,45.280,1.25],["Sadr (γ Cyg)",20.3705,40.257,2.23],["Albireo (β Cyg)",19.5120,27.960,3.05],["Aljanah (ε Cyg)",20.7702,33.970,2.48],["Fawaris (δ Cyg)",19.7496,45.131,2.87],["η Cyg",19.9384,35.083,3.89],["ζ Cyg",21.2156,30.227,3.21]],
+    lines:[[0,1],[1,5],[5,2],[4,1],[1,3],[3,6]]}
+};
+const GROUPS=[["Ciel austral",["south_region","crux_pointers","crux","triangulum","canis_major"]],["Zodiaque",["scorpius","sagittarius","leo","taurus","gemini"]],["Autres",["orion","pleiades","aquila","cygnus"]]];
+const DEG=Math.PI/180, LAT=-21.1;
+const MONTHS=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+
+(function prepare(){
+  for(const key in CAT){
+    const c=CAT[key];let sx=0,sy=0,sz=0;
+    c.stars.forEach(s=>{const a=s[1]*15*DEG,d=s[2]*DEG;sx+=Math.cos(d)*Math.cos(a);sy+=Math.cos(d)*Math.sin(a);sz+=Math.sin(d);});
+    const a0=Math.atan2(sy,sx),d0=Math.atan2(sz,Math.hypot(sx,sy));
+    c.ra0=((a0/DEG/15)+24)%24;c.dec0=d0/DEG;
+    c.pts=c.stars.map(s=>{
+      const a=s[1]*15*DEG,d=s[2]*DEG;
+      const cc=Math.sin(d0)*Math.sin(d)+Math.cos(d0)*Math.cos(d)*Math.cos(a-a0);
+      const xi=Math.cos(d)*Math.sin(a-a0)/cc;
+      const eta=(Math.cos(d0)*Math.sin(d)-Math.sin(d0)*Math.cos(d)*Math.cos(a-a0))/cc;
+      return {u:-xi/DEG,v:-eta/DEG}; /* est à gauche, nord en haut : vue de dessous */
+    });
+    c.altMax=Math.min(...c.stars.map(s=>90-Math.abs(s[2]-LAT)));
+    const k=(((c.ra0-21)%24)+24)%24/2;
+    c.month=MONTHS[Math.floor((8.7+k)%12)];
+  }
+})();
+
+/* ================= État ================= */
+const DEFAULT={
+  room:{L:600,W:230,H:250},
+  panel:{w:37.5,off:0,dir:"y",avoid:true,margin:1},
+  batt:{show:true,mode:"auto",n:10,e:25,w:4.5,margin:1,op:0.35},
+  purl:{use:true,show:true,mode:"auto",n:4,first:75,e:150,w:6,margin:2,op:0.35,list:[],listEdited:false},
+  sizes:[{name:"COB 9 W",kind:"spot",n:10,d:7,watt:9,lm:800,beam:60},{name:"COB 5 W",kind:"spot",n:10,d:5.5,watt:5,lm:450,beam:60},{name:"Fibre 1 mm",kind:"fibre",n:200,d:0.1,core:1,pw:16,cmode:"k",kelvin:6000}],
+  assign:{center:0.6,border:true,borderCm:25,gap:3,fgap:1.5,snap:true,spread:65,fibThrough:false,spotFill:true},
+  table:{show:true,len:180,wid:90,cx:300,cy:115,h:75},
+  free:{auto:true,n:150,zone:"all",band:45,sp:5,minD:10,seed:42,shape:"milky",px:50,py:50,size:70,rot:-12,detail:40,contrast:70,bg:3,prio:0,curve:0,tilt:45,manual:[]},
+  fib:{x:5,y:60,slack:30,per:200},
+  chans:[{name:"Canal 1",color:"#F2B33D"},{name:"Canal 2",color:"#E56B6F"},{name:"Canal 3",color:"#6FA8DC"},{name:"Canal 4",color:"#7BC8A4"}],
+  rules:[{w:"spots",ch:1},{w:"bright",n:8,ch:0},{w:"table",ch:2},{w:"fibres",ch:3}],
+  scenes:[{name:"Tout allumé",on:[true,true,true,true]},{name:"Moyen",on:[false,true,true,true]},{name:"Faible",on:[false,false,true,true]},{name:"Fibres seules",on:[false,false,false,true]},{name:"Éteint",on:[false,false,false,false]}],
+  favs:[],
+  elec:{x:5,y:115,slack:20},
+  view:{mode:"scene",mirror:false,single:false,lines:true,strip:1,cnames:true,names:false,nums:true,dims:true,heat:false,zoom:1,addFree:false,cable:false,unlit:"hide",fibroute:false,scene:0,chcol:true},
+  sameScale:true,
+  items:[{id:"c1",key:"crux_pointers",x:180,y:115,s:8,r:0,vis:true},{id:"c2",key:"scorpius",x:420,y:115,s:8,r:0,vis:true}],
+  ov:{}
+};
+const STORE="plafond-etoile-reunion-v1";
+const clone=o=>JSON.parse(JSON.stringify(o));
+function merge(base,add){for(const k in add){if(add[k]&&typeof add[k]==="object"&&!Array.isArray(add[k])&&base[k]&&typeof base[k]==="object"&&!Array.isArray(base[k]))merge(base[k],add[k]);else base[k]=add[k];}return base;}
+let state=null,fresh=false,baseRev=SEED&&SEED.rev||null,fromShared=false;
+try{const s=localStorage.getItem(STORE);if(s){const o=JSON.parse(s);const st=o&&o.state?o.state:o;const b=o&&o.state?o.base:null;
+  if(!(SEED&&SEED.state&&b!==SEED.rev))state=merge(clone(DEFAULT),st);}}catch(e){state=null;}
+if(!state&&SEED&&SEED.state){state=merge(clone(DEFAULT),SEED.state);fromShared=true;}
+if(!state){state=clone(DEFAULT);fresh=true;}
+function migrate(o){
+  if(o&&Array.isArray(o.sizes))o.sizes.forEach(z=>{delete z.magMax;});
+  if(!o||!Array.isArray(o.sizes))return o;
+  const old=o.sizes.some(z=>!z.kind);
+  o.sizes.forEach(z=>{if(!z.kind)z.kind=z.d<=0.3?"fibre":"spot";if(z.kind==="fibre"&&!z.core)z.core=Math.round(z.d*100)/10||1;});
+  if(old&&!o.sizes.some(z=>z.kind==="fibre"))o.sizes.push({name:"Fibre 1 mm",kind:"fibre",n:200,d:0.1,core:1});
+  if(old&&o.free){o.free.zone="all";o.free.minD=10;o.free.sp=5;o.free.auto=true;}
+  if(o.view){const m=o.view.mode,n=(o.scenes||[]).length;
+    if(m==="on"){o.view.mode="scene";o.view.scene=0;}
+    else if(m==="fib"){o.view.mode="scene";o.view.scene=Math.min(3,n-1);}
+    else if(m==="off"){o.view.mode="scene";o.view.scene=n-1;}
+    else if(m!=="plan")o.view.mode="scene";
+    if(!(o.view.scene>=0&&o.view.scene<n))o.view.scene=0;}
+  if(o.free){if(o.free.density==="center"&&o.free.prio===0)o.free.prio=60;if(o.free.density==="edges"&&o.free.prio===0)o.free.prio=-60;delete o.free.density;o.free.seed=Math.max(0,Math.min(100,Math.round(o.free.seed||0)));}
+  o.sizes.forEach(z=>{if(z.kind==="fibre"){if(z.pw==null)z.pw=16;if(!z.cmode)z.cmode=z.color&&z.color.toUpperCase()!=="#EEF3FF"?"rgb":"k";if(!z.kelvin)z.kelvin=6000;}});
+  if(o.chans&&o.scenes)o.scenes.forEach(sc=>{while(sc.on.length<o.chans.length)sc.on.push(false);sc.on.length=o.chans.length;});
+  return o;
+}
+migrate(state);
+function saveNow(){try{localStorage.setItem(STORE,JSON.stringify({base:baseRev,state}));}catch(e){}}
+let saveT=null;
+function saveSoon(){clearTimeout(saveT);saveT=setTimeout(saveNow,400);}
+const fmt=(v,d=1)=>(Math.round(v*10**d)/10**d).toFixed(d).replace(".",",");
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ================= Structure ================= */
+let T=null,FC=new Map(),R=null;
+function struct(){
+  const S=state,L=S.room.L,W=S.room.W,dir=S.panel.dir;
+  const jLen=dir==="y"?L:W, bLen=dir==="y"?W:L, pLen=dir==="y"?L:W;
+  const w=Math.max(1,S.panel.w), off=((S.panel.off%w)+w)%w;
+  const joints=[];for(let p=off;p<jLen-0.05;p+=w){if(p>0.05)joints.push(p);}
+  const bw=S.batt.w, batt=[];
+  if(S.batt.mode==="auto"){const n=Math.max(2,Math.round(S.batt.n));for(let i=0;i<n;i++)batt.push(bw/2+i*(bLen-bw)/(n-1));}
+  else{const e=Math.max(2,S.batt.e);let p=bw/2;batt.push(p);p+=e;while(p<bLen-bw/2-0.5){batt.push(p);p+=e;}batt.push(bLen-bw/2);}
+  const purl=[],purlW=[];const n=Math.max(0,Math.round(S.purl.n));
+  if(S.purl.mode==="list"){(S.purl.list||[]).forEach(q=>{const w=Math.max(0.5,+q.w||0.5),d=Math.max(0,+q.d||0);purl.push(q.ref==="b"?pLen-d-w/2:d+w/2);purlW.push(w);});}
+  else if(S.purl.mode==="auto"){for(let i=0;i<n;i++){purl.push((i+0.5)*pLen/n);purlW.push(S.purl.w);}}
+  else{for(let i=0;i<n;i++){const p=S.purl.first+i*S.purl.e;if(p>=0&&p<=pLen){purl.push(p);purlW.push(S.purl.w);}}}
+  return {joints,jAxis:dir==="y"?"x":"y",jLen,batt,bAxis:dir==="y"?"y":"x",bLen,purl,purlW,pAxis:dir==="y"?"x":"y",pLen};
+}
+function segsOf(list,lo,hi){
+  const iv=list.map(a=>[a[0],a[1]]).sort((a,b)=>a[0]-b[0]);const out=[];let cur=lo;
+  for(const [a,b] of iv){if(b<=cur)continue;if(a>=hi)break;if(a>cur)out.push([cur,a]);cur=Math.max(cur,b);}
+  if(cur<hi)out.push([cur,hi]);return out;
+}
+function getF(r){
+  const key=r.toFixed(3);if(FC.has(key))return FC.get(key);
+  const S=state,xr=[],yr=[];const push=(ax,a,b,l)=>(ax==="x"?xr:yr).push([a,b,l]);
+  if(S.panel.avoid)T.joints.forEach(p=>push(T.jAxis,p-r-S.panel.margin,p+r+S.panel.margin,"joint de lames"));
+  if(!(r<0.2&&S.assign.fibThrough))T.batt.forEach((p,i)=>push(T.bAxis,p-S.batt.w/2-r-S.batt.margin,p+S.batt.w/2+r+S.batt.margin,"tasseau T"+(i+1)));
+  if(S.purl.use)T.purl.forEach((p,i)=>push(T.pAxis,p-T.purlW[i]/2-r-S.purl.margin,p+T.purlW[i]/2+r+S.purl.margin,"panne C P"+(i+1)));
+  const F={xr,yr,xs:segsOf(xr,r+0.3,S.room.L-r-0.3),ys:segsOf(yr,r+0.3,S.room.W-r-0.3)};
+  FC.set(key,F);return F;
+}
+function nearest(v,segs){let best=null,bd=Infinity;for(const [a,b] of segs){const c=v<a?a:v>b?b:v;const d=Math.abs(c-v);if(d<bd){bd=d;best=c;}}return best;}
+function isValid(v,segs){return segs.some(([a,b])=>v>=a-1e-6&&v<=b+1e-6);}
+function whyBad(x,y,F,r){
+  const out=[];F.xr.forEach(([a,b,l])=>{if(x>a+1e-6&&x<b-1e-6)out.push(l);});F.yr.forEach(([a,b,l])=>{if(y>a+1e-6&&y<b-1e-6)out.push(l);});
+  if(x<r||x>state.room.L-r||y<r||y>state.room.W-r)out.push("bord du plafond");
+  return [...new Set(out)].join(", ")||"position impossible";
+}
+
+/* ================= Calcul ================= */
+const PH_R=0.3;
+const fmtD=d=>fmt(d*10,d<1?1:0)+" mm";
+function basePos(it,p,ov){
+  const r=it.r*DEG,co=Math.cos(r),si=Math.sin(r);
+  return {x:it.x+it.s*(p.u*co-p.v*si)+(ov.dx||0),y:it.y+it.s*(p.u*si+p.v*co)+(ov.dy||0)};
+}
+function inBorderXY(x,y){const b=state.assign.borderCm;return x<b||x>state.room.L-b||y<b||y>state.room.W-b;}
+function isFib(k){const z=state.sizes[k];return !!z&&z.kind==="fibre";}
+function compute(){
+  const S=state;T=struct();FC=new Map();
+  const out={stars:[],byKey:{},lines:[]};
+  S.items.forEach(it=>{
+    if(!it.vis)return;const c=CAT[it.key];if(!c)return;
+    c.pts.forEach((p,i)=>{
+      const key=it.id+":"+i,ov=S.ov[key]||{};if(ov.st==="hide")return;
+      const b=basePos(it,p,ov);
+      const st={key,item:it,c,i,name:c.stars[i][0],mag:c.stars[i][3],bx:b.x,by:b.y,x:b.x,y:b.y,ov,size:-1,r:PH_R,lit:false,snap:0,conf:null,reason:""};
+      out.stars.push(st);out.byKey[key]=st;
+    });
+    c.lines.forEach(([a,b])=>out.lines.push([it.id+":"+a,it.id+":"+b]));
+  });
+  const mk=(key,x,y,label,manual)=>{const ov=S.ov[key]||{};if(ov.st==="hide")return null;
+    const st={key,item:null,free:true,manual,c:null,i:0,name:label,mag:9,bx:x+(ov.dx||0),by:y+(ov.dy||0),ov,size:-1,r:PH_R,lit:false,snap:0,conf:null,reason:""};
+    st.x=st.bx;st.y=st.by;out.stars.push(st);out.byKey[key]=st;return st;};
+  (S.free.manual||[]).forEach((m,j)=>mk("m:"+m.id,m.x,m.y,"Fibre ajoutée "+(j+1),true));
+  const rem=S.sizes.map(z=>Math.max(0,Math.round(z.n)));
+  const idx=S.sizes.map((z,i)=>i);
+  const pw=z=>(z.lm||0)+(z.watt||0)*100+z.d;const spots=idx.filter(i=>!isFib(i)).sort((a,b)=>pw(S.sizes[b])-pw(S.sizes[a]));
+  const fibs=idx.filter(i=>isFib(i)).sort((a,b)=>S.sizes[b].d-S.sizes[a].d);
+  const auto=[];
+  out.stars.forEach(st=>{
+    const o=st.ov.st;
+    if(o==="phos")st.reason="laissée sans lumière";
+    else if(typeof o==="number"&&S.sizes[o]){st.size=o;st.forced=true;rem[o]--;}
+    else auto.push(st);
+  });
+  const tcx=S.table.cx,tcy=S.table.cy,half=S.room.L/2;
+  auto.forEach(st=>{const dc=Math.hypot(st.bx-tcx,st.by-tcy);st.pk=st.free?100+dc/100:st.mag+S.assign.center*3*dc/half;});
+  auto.sort((a,b)=>a.pk-b.pk);
+  const placed=out.stars.filter(z=>z.size>=0);
+  const gapOf=(a,b)=>isFib(a)&&isFib(b)?S.assign.fgap:S.assign.gap;
+  const tryPlace=(st,cands)=>{let blocker=null;
+    const k=cands.find(k=>{if(rem[k]<=0)return false;const r=S.sizes[k].d/2;blocker=placed.find(o=>Math.hypot(o.bx-st.bx,o.by-st.by)<r+S.sizes[o.size].d/2+gapOf(k,o.size))||null;return !blocker;});
+    if(k===undefined)return blocker;st.size=k;rem[k]--;placed.push(st);return true;};
+  auto.forEach(st=>{
+    const border=S.assign.border&&inBorderXY(st.bx,st.by);let res=null;
+    if(!st.free&&!border){res=tryPlace(st,spots);if(res===true)return;}
+    const r2=tryPlace(st,fibs);if(r2===true)return;
+    const bl=res||r2;
+    st.reason=bl?"trop proche de "+bl.name.replace(/ \(.*\)/,""):(border&&!fibs.some(k=>rem[k]>0)?"trop près d’un mur":"plus de lumière disponible");
+  });
+  out.spotFillN=0;if(S.assign.spotFill!==false)fillSpots(out,rem,spots,mk);
+  fillFibers(out,rem,fibs,mk);
+  out.stars.forEach(st=>{
+    if(st.size<0)return;
+    st.lit=true;st.r=S.sizes[st.size].d/2;
+    const F=getF(st.r);
+    if(S.assign.snap){
+      const nx=nearest(st.bx,F.xs),ny=nearest(st.by,F.ys);
+      if(nx===null||ny===null){st.conf="aucune place libre pour ce diamètre";}
+      else{st.x=nx;st.y=ny;st.snap=Math.hypot(nx-st.bx,ny-st.by);}
+    }else if(!isValid(st.bx,F.xs)||!isValid(st.by,F.ys)){st.conf="sur "+whyBad(st.bx,st.by,F,st.r);}
+  });
+  const lit=out.stars.filter(z=>z.lit);
+  for(let i=0;i<lit.length;i++)for(let j=i+1;j<lit.length;j++){
+    const a=lit[i],b=lit[j],g=gapOf(a.size,b.size);const dx=a.x-b.x,dy=a.y-b.y,lim=a.r+b.r+g;
+    if(Math.abs(dx)<lim&&Math.abs(dy)<lim&&Math.hypot(dx,dy)<lim){a.conf=a.conf||("trop proche de "+b.name);b.conf=b.conf||("trop proche de "+a.name);}
+  }
+  lit.forEach(st=>{st.lame=lameOf(st);});
+  lit.sort((a,b)=>(a.lame.n-b.lame.n)||(a.lame.along-b.lame.along));
+  {let nl=0,nf=0;lit.forEach(st=>{st.no=isFib(st.size)?"F"+(++nf):"L"+(++nl);});}
+  out.lit=lit;out.rem=rem;
+  const spotLit=lit.filter(z=>!isFib(z.size)),fibLit=lit.filter(z=>isFib(z.size));out.spotLit=spotLit;out.fibLit=fibLit;
+  {const C=Math.max(1,S.chans.length),tb0=tableRect();
+   const brightRank=new Map();spotLit.filter(z=>!z.free).sort((a,b)=>a.mag-b.mag).forEach((z,i)=>brightRank.set(z.key,i));
+   const inZone=(z,w)=>{const inT=z.x>=tb0.x0&&z.x<=tb0.x1&&z.y>=tb0.y0&&z.y<=tb0.y1;
+     if(w==="table")return inT;if(w==="out")return !inT;if(w==="edges")return Math.min(z.x,S.room.L-z.x,z.y,S.room.W-z.y)<60;
+     if(w==="near"){const dx=Math.max(tb0.x0-z.x,0,z.x-tb0.x1),dy=Math.max(tb0.y0-z.y,0,z.y-tb0.y1);return Math.hypot(dx,dy)<=30;}
+     if(w==="center")return Math.hypot((z.x-S.room.L/2)/(S.room.L/2),(z.y-S.room.W/2)/(S.room.W/2))<0.5;return false;};
+   lit.forEach(z=>{const fib=isFib(z.size);let ch=0;
+     (S.rules||[]).forEach(r=>{let m=false;
+       if(r.w==="fibres")m=fib;else if(r.w==="size")m=z.size===r.size;
+       else if(!fib){if(r.w==="spots")m=true;else if(r.w==="cons")m=!!z.item&&z.item.id===r.item;else if(r.w==="bright")m=brightRank.has(z.key)&&brightRank.get(z.key)<(r.n||0);else m=inZone(z,r.w);}
+       if(m)ch=r.ch;});
+     if(!fib&&typeof z.ov.ch==="number")ch=z.ov.ch;
+     z.ch=clamp(Math.round(ch)||0,0,C-1);});
+   const sc=S.scenes[clamp(S.view.scene|0,0,Math.max(0,S.scenes.length-1))]||{on:[]};
+   const lo=S.view.layerOff||[];lit.forEach(z=>{z.layerOff=!!lo[z.size];z.on=!!sc.on[z.ch]&&!z.layerOff;});
+   out.spotOn=spotLit.filter(z=>z.on);out.fibOn=fibLit.filter(z=>z.on);
+   const seg=[],chCable=new Array(C).fill(0);let total=0;
+   for(let c=0;c<C;c++){
+     const pts=spotLit.filter(z=>z.ch===c);if(!pts.length)continue;
+     const nodes=[{x:S.elec.x,y:S.elec.y}].concat(pts),n=nodes.length,inT=new Array(n).fill(false),best=new Array(n).fill(Infinity),par=new Array(n).fill(-1);let tot=0;best[0]=0;
+     for(let k=0;k<n;k++){let u=-1;for(let i=0;i<n;i++)if(!inT[i]&&(u<0||best[i]<best[u]))u=i;inT[u]=true;if(par[u]>=0){seg.push([nodes[par[u]],nodes[u],c]);tot+=best[u];}
+       for(let v=0;v<n;v++)if(!inT[v]){const d=Math.abs(nodes[u].x-nodes[v].x)+Math.abs(nodes[u].y-nodes[v].y);if(d<best[v]){best[v]=d;par[v]=u;}}}
+     chCable[c]=tot+pts.length*S.elec.slack;total+=chCable[c];
+   }
+   out.cable={seg,len:total};out.chCable=chCable;}
+  {const fl=fibLit.map(z=>(Math.abs(z.x-S.fib.x)+Math.abs(z.y-S.fib.y)+S.fib.slack)/100);fibLit.forEach((z,i)=>{z.att=Math.pow(10,-0.02*fl[i]);});
+   const cnt={};fibLit.forEach(z=>{cnt[z.size]=(cnt[z.size]||0)+1;});fibLit.forEach(z=>{const q=S.sizes[z.size],plm=q.plm||(q.pw||0)*60;z.flm=plm*0.35/Math.max(1,q.n,cnt[z.size])*(z.att||1);});
+   out.fib={max:fl.length?Math.max(...fl):0,total:fl.reduce((a,b)=>a+b,0),buckets:[0,1,2,3,4].map(i=>fl.filter(v=>v>i&&v<=i+1).length),over:fl.filter(v=>v>5).length};}
+  out.used=S.sizes.map((z,k)=>lit.filter(x=>x.size===k).length);
+  let len=0;
+  out.lines.forEach(([ka,kb])=>{const a=out.byKey[ka],b=out.byKey[kb];if(!a||!b)return;len+=Math.max(0,Math.hypot(a.x-b.x,a.y-b.y)-a.r-b.r);});
+  out.stripLen=len;
+  const tb=tableRect();
+  out.overTable=spotLit.filter(z=>z.x>=tb.x0&&z.x<=tb.x1&&z.y>=tb.y0&&z.y<=tb.y1).length;
+  out.lightOn=out.spotOn.concat(out.fibOn);out.lux=luxStats(out.lightOn,tb);out.luxAll=luxStats(lit,tb);
+  R=out;return out;
+}
+function rng(seed){let t=seed>>>0;return()=>{t=(t+0x6D2B79F5)>>>0;let r=Math.imul(t^(t>>>15),1|t);r^=r+Math.imul(r^(r>>>7),61|r);return((r^(r>>>14))>>>0)/4294967296;};}
+function segDist(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l=dx*dx+dy*dy;const t=l?clamp(((px-ax)*dx+(py-ay)*dy)/l,0,1):0;return Math.hypot(px-ax-t*dx,py-ay-t*dy);}
+function fillSpots(out,rem,spots,mk){
+  const S=state,L=S.room.L,W=S.room.W,left=spots.reduce((a,k)=>a+Math.max(0,rem[k]),0);if(!left)return;
+  const r=rng(Math.round(S.free.seed)*48271+3),bc=S.assign.border?S.assign.borderCm:0;
+  const segs=out.lines.map(([a,b])=>[out.byKey[a],out.byKey[b]]).filter(q=>q[0]&&q[1]);
+  const placed=out.stars.filter(z=>z.size>=0||!z.free);let made=0;
+  for(let i=0;i<8000&&made<left;i++){
+    const k=spots.find(q=>rem[q]>0);if(k===undefined)break;
+    const rr=S.sizes[k].d/2,F=getF(rr),x=bc+rr+r()*(L-2*(bc+rr)),y=bc+rr+r()*(W-2*(bc+rr)),key="s:"+i;
+    if(S.ov[key]&&S.ov[key].st==="hide")continue;
+    if(!isValid(x,F.xs)||!isValid(y,F.ys))continue;
+    if(placed.some(z=>Math.hypot(z.bx-x,z.by-y)<rr+(z.size>=0&&!isFib(z.size)?S.sizes[z.size].d/2+18:10)))continue;
+    if(segs.some(([a,b])=>segDist(x,y,a.bx,a.by,b.bx,b.by)<8))continue;
+    const st=mk(key,x,y,"Étoile de fond (ampoule) "+(made+1),false);if(!st)continue;
+    st.size=k;st.spotFill=true;rem[k]--;placed.push(st);made++;
+  }
+  out.spotFillN=made;
+}
+function fillFibers(out,rem,fibs,mk){
+  const S=state,F=S.free,L=S.room.L,W=S.room.W,tb=tableRect();out.fillShort=0;out.fillN=0;
+  const remF=fibs.reduce((a,k)=>a+Math.max(0,rem[k]),0);
+  const target=F.auto?remF:Math.max(0,Math.round(F.n));if(!target)return;
+  const rmin=fibs.length?Math.min(...fibs.map(k=>S.sizes[k].d/2)):0.05,Fv=getF(rmin);
+  const segs=out.lines.map(([a,b])=>[out.byKey[a],out.byKey[b]]).filter(q=>q[0]&&q[1]);
+  const ex=out.stars.slice(),sp=Math.max(1,F.sp),md=Math.max(0,F.minD),grid=new Map();
+  const near=(x,y)=>{const cx=Math.floor(x/sp),cy=Math.floor(y/sp);for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const a=grid.get((cx+i)+","+(cy+j));if(a)for(const q of a)if(Math.hypot(q.x-x,q.y-y)<sp)return true;}return false;};
+  const r=rng(Math.round(F.seed)*2654435761+7);let made=0;
+  const gen=F.shape==="uniform"?null:shapeGen(F,L,W),bgv=clamp(F.bg/100,0,1),P=clamp(F.prio/100,-1,1),gk0="g:"+F.shape+Math.round(F.seed)+":";
+  for(let i=0;i<30000&&made<target;i++){
+    let x,y;const key=gk0+i;
+    if(!gen||r()<bgv){x=3+r()*(L-6);y=3+r()*(W-6);}
+    else{const q=gen(r);if(!q)continue;x=q[0];y=q[1];if(x<3||x>L-3||y<3||y>W-3)continue;}
+    const acc=r();
+    if(S.ov[key]&&S.ov[key].st==="hide")continue;
+    if(F.zone==="edges"&&Math.min(x,L-x,y,W-y)>F.band)continue;
+    if(F.zone==="out"&&x>tb.x0-10&&x<tb.x1+10&&y>tb.y0-10&&y<tb.y1+10)continue;
+    {const dn=Math.min(1,Math.hypot((x-L/2)/(L/2),(y-W/2)/(W/2))),pp=P>=0?1-0.85*P*dn:1-0.85*(-P)*(1-dn);if(acc>pp)continue;}
+    if(!isValid(x,Fv.xs)||!isValid(y,Fv.ys))continue;
+    if(ex.some(z=>Math.hypot(z.bx-x,z.by-y)<md+(z.size>=0?S.sizes[z.size].d/2:0)))continue;
+    if(segs.some(([a,b])=>segDist(x,y,a.bx,a.by,b.bx,b.by)<md*0.5))continue;
+    if(near(x,y))continue;
+    const gk=Math.floor(x/sp)+","+Math.floor(y/sp);if(!grid.has(gk))grid.set(gk,[]);grid.get(gk).push({x,y});
+    made++;
+    const st=mk(key,x,y,"Fibre de fond "+made,false);if(!st)continue;
+    const o=st.ov.st;
+    if(o==="phos"){st.reason="laissée sans lumière";continue;}
+    if(typeof o==="number"&&S.sizes[o]){st.size=o;st.forced=true;rem[o]--;continue;}
+    const k=fibs.filter(k=>rem[k]>0).sort((a,b)=>rem[b]/Math.max(1,S.sizes[b].n)-rem[a]/Math.max(1,S.sizes[a].n))[0];
+    if(k===undefined){st.reason="plus de fibre disponible";continue;}
+    st.size=k;rem[k]--;
+  }
+  out.fillN=made;out.fillShort=Math.max(0,target-made);
+}
+function gauss(r){let u=0;while(u===0)u=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*r());}
+function kelvinRgb(K){const t=clamp(K,1000,40000)/100;let r,g,b;
+  if(t<=66){r=255;g=99.4708025861*Math.log(t)-161.1195681661;b=t<=19?0:138.5177312231*Math.log(t-10)-305.0447927307;}
+  else{r=329.698727446*Math.pow(t-60,-0.1332047592);g=288.1221695283*Math.pow(t-60,-0.0755148492);b=255;}
+  return [r,g,b].map(v=>Math.round(clamp(v,0,255))).join(",");}
+function mixW(c,f){return c.split(",").map(v=>Math.round(+v+(255-v)*f)).join(",");}
+function powerOf(sp,fb){const S=state;let w=sp.reduce((a,z)=>a+(S.sizes[z.size].watt||0),0);new Set(fb.map(z=>z.size)).forEach(k=>{w+=S.sizes[k].pw||0;});return w;}
+function hexRgb(h){const m=/^#?([0-9a-f]{6})$/i.exec(h||"");const n=m?parseInt(m[1],16):0xEEF3FF;return ((n>>16)&255)+","+((n>>8)&255)+","+(n&255);}
+function hashTw(t){let h=2166136261;for(let i=0;i<t.length;i++){h^=t.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0)/4294967295;}
+function shapeGen(F,L,W){
+  const sr=rng(Math.round(F.seed)*7919+101),ph=[sr()*6.283,sr()*6.283,sr()*6.283];
+  const cx=F.px/100*L,cy=F.py/100*W,th=F.rot*DEG,co=Math.cos(th),si=Math.sin(th),det=clamp(F.detail/100,0,1);
+  const sharp=1.6-1.2*clamp(F.contrast/100,0,1),Sr=Math.max(10,F.size/100*W*0.8),Sl=Math.max(10,F.size/100*L/2);
+  const cv=clamp((F.curve||0)/100,-1,1),fl=Math.cos(clamp(F.tilt||0,0,85)*DEG);
+  const out=(a,b)=>[cx+a*co-b*si,cy+a*si+b*co];
+  if(F.shape==="milky"){
+    const w0=W*(0.04+0.22*det)*sharp;
+    return r=>{const t=r()*2.3-1.15,w=w0*(1+1.1*Math.exp(-(((t-0.55)/0.3)**2)));
+      const b0=cv*Sl*0.6*(t*t-0.4)+W*0.03*Math.sin(2.2*t+ph[0]);
+      const core=r()<0.6,b=b0+gauss(r)*(core?w*0.35:w);
+      if(core&&t>-0.3&&Math.abs(b-b0-w*0.05)<w*0.1&&r()<0.8)return null;
+      return out(t*Sl,b);};
+  }
+  if(F.shape==="galaxy"||F.shape==="vortex"){
+    const vt=F.shape==="vortex",m=vt?4+Math.round(det*3):1+Math.round(det*3),turns=vt?1.2+det*1.6:1.35,coreF=vt?0.08:0.16;
+    const t0=0.4,t1=t0+turns*2*Math.PI,r0=Sr*0.07,kk=Math.log(Sr/r0)/(t1-t0);
+    return r=>{let a,b;
+      if(r()<coreF){const q=Sr*(vt?0.08:0.13)*sharp;a=gauss(r)*q;b=gauss(r)*q;}
+      else{const j=Math.floor(r()*m),t=t0+Math.pow(r(),0.85)*(t1-t0),rr=r0*Math.exp(kk*t),an=t+2*Math.PI*j/m+ph[0],q=(Sr*0.012+rr*(vt?0.04:0.055))*sharp;
+        a=rr*Math.cos(an)+gauss(r)*q;b=rr*Math.sin(an)+gauss(r)*q;}
+      return out(a,b*fl);};
+  }
+  if(F.shape==="nebula"){
+    const K=3+Math.round(det*7),bl=[];let tw=0;
+    for(let i=0;i<K;i++){const an=sr()*6.283,rad=Math.sqrt(sr())*Sr*0.75,wt=0.4+sr();bl.push([Math.cos(an)*rad*1.4,Math.sin(an)*rad*0.8,Sr*(0.18+0.3*sr())*sharp,wt]);tw+=wt;}
+    return r=>{let u=r()*tw,k=0;while(k<K-1&&u>bl[k][3]){u-=bl[k][3];k++;}const q=bl[k];return out(q[0]+gauss(r)*q[2],q[1]+gauss(r)*q[2]*0.8);};
+  }
+  if(F.shape==="clusters"){
+    const K=2+Math.round(det*8),bl=[];for(let i=0;i<K;i++)bl.push([(sr()-0.5)*2.2*Sl,(sr()-0.5)*1.5*Sr,Sr*(0.05+0.07*sr())*sharp]);
+    return r=>{const q=bl[Math.floor(r()*K)];return out(q[0]+gauss(r)*q[2],q[1]+gauss(r)*q[2]);};
+  }
+  return null;
+}
+function lameOf(st){
+  const a=T.jAxis==="x"?st.x:st.y,along=T.jAxis==="x"?st.y:st.x;
+  const bounds=[0,...T.joints,T.jLen];let n=1,edge=a,width=bounds[1];
+  for(let i=0;i<bounds.length-1;i++){if(a>=bounds[i]&&a<=bounds[i+1]){n=i+1;edge=a-bounds[i];width=bounds[i+1]-bounds[i];break;}}
+  const b=T.bAxis==="y"?st.y:st.x;let between="";
+  for(let i=0;i<T.batt.length-1;i++){if(b>=T.batt[i]&&b<=T.batt[i+1]){between="T"+(i+1)+" et T"+(i+2);break;}}
+  return {n,edge,width,along,between};
+}
+function tableRect(){const t=state.table;return {x0:t.cx-t.len/2,x1:t.cx+t.len/2,y0:t.cy-t.wid/2,y1:t.cy+t.wid/2};}
+function luxAt(x,y,lit,h){
+  let E=0;
+  for(const st of lit){
+    const s=state.sizes[st.size],fb=s.kind==="fibre",half=Math.max(5,(fb?60:s.beam)/2)*DEG;
+    const I0=(fb?(st.flm||0):s.lm)/(2*Math.PI*(1-Math.cos(half)));
+    const rho=Math.hypot(x-st.x,y-st.y)/100;const al=Math.atan2(rho,h);
+    const f=al<=half?1:Math.exp(-(((al-half)/(8*DEG))**2));
+    E+=I0*f*Math.cos(al)**3/(h*h);
+  }
+  return E;
+}
+function luxStats(lit,tb){
+  const h=Math.max(0.3,(state.room.H-state.table.h)/100);
+  if(!lit.length)return {avg:0,min:0,max:0,h};
+  let n=0,sum=0,mn=Infinity,mx=0;
+  for(let x=tb.x0+2.5;x<tb.x1;x+=5)for(let y=tb.y0+2.5;y<tb.y1;y+=5){const e=luxAt(x,y,lit,h);sum+=e;n++;mn=Math.min(mn,e);mx=Math.max(mx,e);}
+  return {avg:n?sum/n:0,min:n?mn:0,max:mx,h};
+}
+
+/* ================= Placement automatique ================= */
+function bboxDeg(c,rDeg){
+  const r=rDeg*DEG,co=Math.cos(r),si=Math.sin(r);let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  c.pts.forEach(p=>{const x=p.u*co-p.v*si,y=p.u*si+p.v*co;x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);});
+  return {x0,x1,y0,y1,w:Math.max(0.5,x1-x0),h:Math.max(0.5,y1-y0),cx:(x0+x1)/2,cy:(y0+y1)/2};
+}
+function autoArrange(){
+  const S=state,its=S.items.filter(i=>i.vis&&CAT[i.key]);if(!its.length)return;
+  const L=S.room.L,W=S.room.W,bm=Math.max(S.assign.border?S.assign.borderCm:0,12)+6;
+  its.forEach(it=>{let best=null;for(let r=-90;r<=90;r+=5){const b=bboxDeg(CAT[it.key],r);const sc=b.h/b.w+Math.abs(r)/900;if(!best||sc<best.sc)best={r,sc};}it.r=best.r;});
+  const bbs=its.map(it=>bboxDeg(CAT[it.key],it.r));
+  const gap=its.length>1?Math.max(0.08*L,40):0,spread=clamp(S.assign.spread,20,100)/100*L;
+  const sumW=bbs.reduce((a,b)=>a+b.w,0),maxH=Math.max(...bbs.map(b=>b.h));
+  const s=clamp(Math.min((spread-gap*(its.length-1))/sumW,(W-2*bm)/maxH),2,40);
+  let x=(L-(sumW*s+gap*(its.length-1)))/2;
+  its.forEach((it,i)=>{const b=bbs[i];it.s=Math.round(s*2)/2;const cx=x+b.w*it.s/2;it.x=Math.round((cx-b.cx*it.s)*2)/2;it.y=Math.round((W/2-b.cy*it.s)*2)/2;x+=b.w*it.s+gap;});
+}
+function optimize(){
+  compute();const S=state;
+  S.items.filter(i=>i.vis).forEach(it=>{
+    const stars=R.stars.filter(s=>s.item===it&&s.lit);if(!stars.length)return;
+    const rg=Math.round(Math.min(Math.max(S.panel.w,10)/2,20));let best={sc:Infinity,dx:0,dy:0};
+    for(let dx=-rg;dx<=rg;dx++)for(let dy=-rg;dy<=rg;dy++){
+      let sc=0.02*(dx*dx+dy*dy);
+      for(const st of stars){
+        const F=getF(st.r),x=st.bx+dx,y=st.by+dy;
+        const nx=nearest(x,F.xs),ny=nearest(y,F.ys);
+        if(nx===null||ny===null){sc+=1e6;}else sc+=(nx-x)**2+(ny-y)**2;
+        if(S.assign.border&&inBorderXY(x,y))sc+=500;
+        if(sc>=best.sc)break;
+      }
+      if(sc<best.sc)best={sc,dx,dy};
+    }
+    it.x+=best.dx;it.y+=best.dy;
+  });
+}
+
+/* ================= Dessin ================= */
+const cv=document.getElementById("cv"),ctx=cv.getContext("2d"),wrap=document.getElementById("wrap");
+let G={k:1,padL:40,padT:30};let selKey=null;
+function X(x){return G.padL+(state.view.mirror?state.room.L-x:x)*G.k;}
+function Y(y){return G.padT+y*G.k;}
+function rectCm(x,y,w,h){const a=X(x),b=X(x+w);ctx.fillRect(Math.min(a,b),Y(y),Math.abs(b-a),h*G.k);}
+function draw(){
+  const S=state,L=S.room.L,W=S.room.W,V=S.view,mode=V.mode,plan=mode==="plan",off=!(R&&R.spotOn&&R.spotOn.length);
+  let dpr=window.devicePixelRatio||1;
+  const cssW=Math.max(320,wrap.clientWidth*V.zoom);
+  const padL=V.dims?40:12,padR=V.dims?34:12,padT=(V.dims||V.nums)?30:12,padB=V.dims?34:12;
+  const k=(cssW-padL-padR)/L;const cssH=padT+W*k+padB;
+  G={k,padL,padT,cssW,cssH};
+  if(cssW*cssH*dpr*dpr>12e6)dpr=Math.sqrt(12e6/(cssW*cssH));
+  cv.style.width=cssW+"px";cv.style.height=cssH+"px";cv.width=Math.round(cssW*dpr);cv.height=Math.round(cssH*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.fillStyle=plan?"#DCE2E9":"#050B15";ctx.fillRect(0,0,cssW,cssH);
+  const rx=X(0)<X(L)?X(0):X(L),ry=Y(0),rw=L*k,rh=W*k;
+  if(plan){ctx.fillStyle="#F5F7F9";}
+  else{const g=ctx.createRadialGradient(rx+rw/2,ry+rh/2,10,rx+rw/2,ry+rh/2,rw/1.6);g.addColorStop(0,off?"#0A1424":"#14243F");g.addColorStop(1,off?"#050A13":"#0B1629");ctx.fillStyle=g;}
+  ctx.fillRect(rx,ry,rw,rh);
+
+  if(V.heat&&R)drawHeat(plan);
+
+  /* joints de lames */
+  ctx.strokeStyle=plan?"#A3AFBD":"rgba(190,210,235,0.07)";ctx.lineWidth=1;
+  T.joints.forEach(p=>{ctx.beginPath();if(T.jAxis==="x"){ctx.moveTo(X(p),Y(0));ctx.lineTo(X(p),Y(W));}else{ctx.moveTo(X(0),Y(p));ctx.lineTo(X(L),Y(p));}ctx.stroke();});
+
+  /* table */
+  if(S.table.show){const tb=tableRect();ctx.save();ctx.setLineDash([6,5]);ctx.strokeStyle=plan?"#5A6B80":"rgba(220,230,245,0.32)";ctx.lineWidth=1.2;
+    const a=X(tb.x0),b=X(tb.x1);ctx.strokeRect(Math.min(a,b),Y(tb.y0),Math.abs(b-a),(tb.y1-tb.y0)*k);ctx.restore();
+    ctx.fillStyle=plan?"#5A6B80":"rgba(220,230,245,0.4)";ctx.font="11px Sora, system-ui, sans-serif";ctx.textAlign="left";ctx.textBaseline="top";
+    ctx.fillText("Table (en dessous)",Math.min(a,b)+5,Y(tb.y0)+4);}
+
+  /* pannes C */
+  if(S.purl.show){ctx.save();ctx.globalAlpha=S.purl.op;ctx.fillStyle="#7FA2C8";
+    T.purl.forEach((p,i)=>{const pw=T.purlW[i];if(T.pAxis==="x")rectCm(p-pw/2,0,pw,W);else rectCm(0,p-pw/2,L,pw);});ctx.restore();
+    if(plan&&V.nums){ctx.fillStyle="#4A6A92";ctx.font="600 10px Sora, system-ui, sans-serif";ctx.textBaseline="bottom";
+      T.purl.forEach((p,i)=>{if(T.pAxis==="x"){ctx.textAlign="center";ctx.fillText("P"+(i+1),X(p),Y(W)-3);}else{ctx.textAlign="right";ctx.fillText("P"+(i+1),Math.max(X(0),X(L))-4,Y(p)-2);}});}}
+  /* tasseaux */
+  if(S.batt.show){ctx.save();ctx.globalAlpha=S.batt.op;ctx.fillStyle="#C8955A";
+    T.batt.forEach(p=>{if(T.bAxis==="y")rectCm(0,p-S.batt.w/2,L,S.batt.w);else rectCm(p-S.batt.w/2,0,S.batt.w,W);});ctx.restore();}
+
+  if(!R)return;
+  /* bandes phosphorescentes */
+  if(V.lines){
+    ctx.save();ctx.lineCap="round";ctx.lineWidth=Math.max(1,V.strip*k);
+    if(off){ctx.strokeStyle="#A6F7CB";ctx.shadowColor="#6CF0AE";ctx.shadowBlur=10;}
+    else if(plan){ctx.strokeStyle="rgba(30,140,95,0.85)";}
+    else{ctx.strokeStyle="rgba(160,235,200,0.2)";}
+    R.lines.forEach(([ka,kb])=>{const a=R.byKey[ka],b=R.byKey[kb];if(!a||!b)return;const d=Math.hypot(b.x-a.x,b.y-a.y);if(d<=a.r+b.r)return;
+      const ux=(b.x-a.x)/d,uy=(b.y-a.y)/d;ctx.beginPath();ctx.moveTo(X(a.x+ux*a.r),Y(a.y+uy*a.r));ctx.lineTo(X(b.x-ux*b.r),Y(b.y-uy*b.r));ctx.stroke();});
+    ctx.restore();
+  }
+  /* câblage */
+  if(V.cable){
+    ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle=plan?"#C46A12":"rgba(255,177,74,0.75)";ctx.lineWidth=1.3;
+    R.cable.seg.forEach(([a,b,c])=>{ctx.strokeStyle=S.chans[c]?S.chans[c].color:"#C46A12";ctx.beginPath();ctx.moveTo(X(a.x),Y(a.y));if(T.bAxis==="y")ctx.lineTo(X(b.x),Y(a.y));else ctx.lineTo(X(a.x),Y(b.y));ctx.lineTo(X(b.x),Y(b.y));ctx.stroke();});
+    ctx.restore();const ex=X(S.elec.x),ey=Y(S.elec.y);ctx.fillStyle="#FFB14A";ctx.fillRect(ex-6,ey-6,12,12);
+    ctx.fillStyle=plan?"#13233A":"#FFE2B8";ctx.font="600 10px Sora, system-ui, sans-serif";ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillText("Alim.",ex+9,ey);
+  }
+  /* trajets de fibre */
+  if(V.fibroute){
+    const fx=X(S.fib.x),fy=Y(S.fib.y);ctx.save();ctx.strokeStyle=plan?"rgba(36,86,166,0.22)":"rgba(170,200,255,0.14)";ctx.lineWidth=0.7;
+    R.fibLit.forEach(st=>{ctx.beginPath();ctx.moveTo(fx,fy);if(T.bAxis==="y")ctx.lineTo(X(st.x),fy);else ctx.lineTo(fx,Y(st.y));ctx.lineTo(X(st.x),Y(st.y));ctx.stroke();});ctx.restore();
+    ctx.fillStyle="#7EB0FF";ctx.beginPath();ctx.arc(fx,fy,7,0,7);ctx.fill();
+    ctx.fillStyle=plan?"#13233A":"#D6E6FF";ctx.font="600 10px Sora, system-ui, sans-serif";ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillText("Projecteur fibre",fx+10,fy);
+  }else if(plan&&R.fibLit.length){const fx=X(S.fib.x),fy=Y(S.fib.y);ctx.fillStyle="#7EB0FF";ctx.beginPath();ctx.arc(fx,fy,7,0,7);ctx.fill();ctx.fillStyle="#13233A";ctx.font="600 10px Sora, system-ui, sans-serif";ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillText("Projecteur fibre",fx+10,fy);}
+  /* étoiles */
+  R.stars.forEach(st=>{
+    const px=X(st.x),py=Y(st.y);
+    if(!st.lit){
+      if(V.unlit!=="show"&&st.key!==selKey)return;
+      ctx.save();ctx.setLineDash([2,2]);ctx.strokeStyle=plan?"#8C9AAB":"rgba(200,215,235,0.45)";ctx.lineWidth=1;ctx.beginPath();ctx.arc(px,py,3,0,7);ctx.stroke();ctx.restore();return;
+    }
+    if(plan&&st.layerOff)return;
+    const tcol=V.typecol&&!st.layerOff?typeCol(st.size):null;
+    if(isFib(st.size)){
+      const fr=Math.max(0.9,st.r*k);
+      if(plan){ctx.fillStyle=tcol||(V.chcol&&S.chans[st.ch]?S.chans[st.ch].color:"#2456A6");ctx.beginPath();ctx.arc(px,py,Math.max(1.8,fr),0,7);ctx.fill();}
+      else if(!st.on){ctx.fillStyle="#1C2638";ctx.beginPath();ctx.arc(px,py,1.2,0,7);ctx.fill();}
+      else{const fz=S.sizes[st.size],cmax=Math.max(...S.sizes.filter(q=>q.kind==="fibre").map(q=>q.core||1)),tw=clamp(((fz.core||1)/cmax)**2,0.25,1)*(st.att||1),col=fz.cmode==="rgb"?hexRgb(fz.color):kelvinRgb(fz.kelvin||6000);
+        const gR=Math.max(3.2,fr*5)*(0.55+0.65*tw);ctx.save();ctx.globalCompositeOperation="lighter";const g=ctx.createRadialGradient(px,py,0,px,py,gR);g.addColorStop(0,`rgba(${col},${0.95*tw})`);g.addColorStop(0.35,`rgba(${col},${0.3*tw})`);g.addColorStop(1,`rgba(${col},0)`);ctx.fillStyle=g;ctx.beginPath();ctx.arc(px,py,gR,0,7);ctx.fill();ctx.restore();
+        ctx.fillStyle=`rgba(${col},${0.6+0.4*tw})`;ctx.beginPath();ctx.arc(px,py,fr*(0.7+0.4*tw),0,7);ctx.fill();}
+      if(tcol&&!plan){ctx.strokeStyle=tcol;ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(px,py,Math.max(3.5,fr+2.5),0,7);ctx.stroke();}
+      if(st.conf){ctx.strokeStyle="#FF6B6B";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(px,py,fr+3,0,7);ctx.stroke();}
+      if(V.nums&&plan&&V.zoom>=2){ctx.fillStyle="#2456A6";ctx.font="9px Sora, system-ui, sans-serif";ctx.textAlign="left";ctx.textBaseline="bottom";ctx.fillText(st.no,px+fr+2,py-1);}
+      return;
+    }
+    const sz=state.sizes[st.size],rr=Math.max(2.5,st.r*k);
+    if(plan){
+      if(st.snap>0.3){ctx.strokeStyle="#D9822B";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(X(st.bx),Y(st.by));ctx.lineTo(px,py);ctx.stroke();}
+      ctx.fillStyle="#FFFFFF";ctx.strokeStyle="#13233A";ctx.lineWidth=1.3;ctx.beginPath();ctx.arc(px,py,rr,0,7);ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(px-rr-3,py);ctx.lineTo(px+rr+3,py);ctx.moveTo(px,py-rr-3);ctx.lineTo(px,py+rr+3);ctx.lineWidth=0.8;ctx.stroke();
+      if(tcol||(V.chcol&&S.chans[st.ch])){ctx.strokeStyle=tcol||S.chans[st.ch].color;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(px,py,rr+2.5,0,7);ctx.stroke();}
+    }else if(!st.on){
+      ctx.fillStyle="#0E1626";ctx.strokeStyle="rgba(255,255,255,0.14)";ctx.lineWidth=1;ctx.beginPath();ctx.arc(px,py,rr,0,7);ctx.fill();ctx.stroke();
+    }else{
+      const gR=rr*(3.2+sz.lm/120);ctx.save();ctx.globalCompositeOperation="lighter";
+      const g=ctx.createRadialGradient(px,py,0,px,py,gR);const kc=kelvinRgb(sz.kelvin||3000);g.addColorStop(0,`rgba(${mixW(kc,0.3)},0.75)`);g.addColorStop(0.25,`rgba(${kc},0.25)`);g.addColorStop(1,`rgba(${kc},0)`);
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(px,py,gR,0,7);ctx.fill();ctx.restore();
+      ctx.fillStyle=`rgb(${mixW(kelvinRgb(sz.kelvin||3000),0.65)})`;ctx.beginPath();ctx.arc(px,py,rr,0,7);ctx.fill();
+    }
+    if(tcol&&!plan){ctx.strokeStyle=tcol;ctx.lineWidth=2;ctx.beginPath();ctx.arc(px,py,rr+3,0,7);ctx.stroke();}
+    if(st.conf){ctx.strokeStyle="#FF6B6B";ctx.lineWidth=2;ctx.beginPath();ctx.arc(px,py,rr+4,0,7);ctx.stroke();}
+    if(V.nums&&plan){ctx.fillStyle="#13233A";ctx.font="600 10px Sora, system-ui, sans-serif";ctx.textAlign="left";ctx.textBaseline="bottom";ctx.fillText(String(st.no),px+rr+3,py-2);}
+  });
+  /* sélection */
+  if(selKey&&R.byKey[selKey]){const st=R.byKey[selKey];const rr=Math.max(2.5,st.r*k)+7;ctx.save();ctx.setLineDash([3,3]);ctx.strokeStyle=plan?"#12704B":"#9EF2C6";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(X(st.x),Y(st.y),rr,0,7);ctx.stroke();ctx.restore();}
+  /* noms */
+  ctx.textBaseline="middle";
+  if(V.names){ctx.font="10px Sora, system-ui, sans-serif";ctx.textAlign="left";ctx.fillStyle=plan?"#3C4D63":"rgba(215,228,245,0.7)";
+    R.stars.forEach(st=>{if(st.free||(!st.lit&&V.unlit!=="show"))return;const rr=Math.max(2.5,st.r*k);ctx.fillText(st.name.replace(/ \(.*\)/,""),X(st.x)+rr+4,Y(st.y)+(plan&&V.nums&&st.lit?8:0));});}
+  if(V.cnames){ctx.font="600 12px Sora, system-ui, sans-serif";ctx.textAlign="center";ctx.fillStyle=plan?"#13233A":"rgba(225,236,250,0.75)";
+    state.items.forEach(it=>{const ss=R.stars.filter(s=>s.item===it);if(!ss.length)return;let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+      ss.forEach(s=>{const px=X(s.x),py=Y(s.y);x0=Math.min(x0,px);x1=Math.max(x1,px);y0=Math.min(y0,py);y1=Math.max(y1,py);});
+      const ly=y0-14>G.padT+6?y0-14:y1+16;ctx.fillText(CAT[it.key].name.split(" :")[0],(x0+x1)/2,ly);});}
+  drawGizmo(plan);
+  /* cotes */
+  ctx.font="11px Sora, system-ui, sans-serif";ctx.fillStyle=plan?"#3C4D63":"#8FA2BA";
+  if(V.nums){ctx.textAlign="center";ctx.textBaseline="middle";const b=[0,...T.joints,T.jLen];
+    for(let i=0;i<b.length-1;i++){const m=(b[i]+b[i+1])/2;if(T.jAxis==="x")ctx.fillText(String(i+1),X(m),G.padT-11);else{ctx.save();ctx.textAlign="right";ctx.fillText(String(i+1),G.padL-6,Y(m));ctx.restore();}}}
+  if(V.dims){
+    ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText(fmt(L/100,2)+" m",rx+rw/2,ry+rh+20);
+    ctx.save();ctx.translate(rx+rw+18,ry+rh/2);ctx.rotate(Math.PI/2);ctx.fillText(fmt(W/100,2)+" m",0,0);ctx.restore();
+    const ax=X(0)+(V.mirror?16:-16);ctx.save();ctx.translate(ax+(T.jAxis==="y"&&!V.mirror?-12:0),ry+rh/2);ctx.rotate(-Math.PI/2);ctx.fillText("Mur A (X = 0)",0,0);ctx.restore();
+    ctx.textAlign=V.mirror?"right":"left";ctx.fillText("Mur B en haut (Y = 0)",V.mirror?rx+rw:rx,ry+rh+20);
+    ctx.textAlign=V.mirror?"left":"right";ctx.fillText(V.mirror?"Vue de dessus":"Vue de dessous",V.mirror?rx:rx+rw,ry+rh+20);
+  }
+}
+function gzGeom(it){
+  const c=CAT[it.key],b=bboxDeg(c,0),s=it.s,r=it.r*DEG,co=Math.cos(r),si=Math.sin(r),p=14/(G.k*s);
+  const Wp=(u,v)=>({x:it.x+s*(u*co-v*si),y:it.y+s*(u*si+v*co)});
+  const corners=[Wp(b.x0-p,b.y0-p),Wp(b.x1+p,b.y0-p),Wp(b.x1+p,b.y1+p),Wp(b.x0-p,b.y1+p)];
+  const C=Wp(b.cx,b.cy),off=30/G.k;
+  let top=Wp(b.cx,b.y0-p),rot={x:top.x+si*off,y:top.y-co*off};
+  const out=q=>X(q.x)<6||X(q.x)>G.cssW-6||Y(q.y)<6||Y(q.y)>G.cssH-6;
+  if(out(rot)){top=Wp(b.cx,b.y1+p);rot={x:top.x-si*off,y:top.y+co*off};}
+  return {b,corners,C,top,rot};
+}
+function drawGizmo(plan){
+  const it=selItem&&itemOf(selItem);if(!it||!it.vis||!CAT[it.key])return;const g=gzGeom(it);
+  const col=plan?"#12704B":"#9EF2C6",bg=plan?"#FFFFFF":"#0A1424";
+  ctx.save();ctx.strokeStyle=col;ctx.lineWidth=1.3;ctx.setLineDash([5,4]);
+  ctx.beginPath();g.corners.forEach((q,i)=>i?ctx.lineTo(X(q.x),Y(q.y)):ctx.moveTo(X(q.x),Y(q.y)));ctx.closePath();ctx.stroke();ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(X(g.top.x),Y(g.top.y));ctx.lineTo(X(g.rot.x),Y(g.rot.y));ctx.stroke();
+  g.corners.forEach(q=>{ctx.fillStyle=bg;ctx.fillRect(X(q.x)-5,Y(q.y)-5,10,10);ctx.strokeRect(X(q.x)-5,Y(q.y)-5,10,10);});
+  const rx=X(g.rot.x),ry=Y(g.rot.y);ctx.beginPath();ctx.arc(rx,ry,9,0,7);ctx.fillStyle=bg;ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.arc(rx,ry,4.5,-2.6,1.4);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(rx+0.8,ry+4.5);ctx.lineTo(rx+3.5,ry+2.5);ctx.lineTo(rx+0.4,ry+1.6);ctx.fillStyle=col;ctx.fill();
+  const cx=X(g.C.x),cy=Y(g.C.y);ctx.beginPath();ctx.moveTo(cx-7,cy);ctx.lineTo(cx+7,cy);ctx.moveTo(cx,cy-7);ctx.lineTo(cx,cy+7);ctx.stroke();
+  if(drag&&drag.gz){ctx.fillStyle=col;ctx.font="600 12px Sora, system-ui, sans-serif";ctx.textAlign="center";ctx.textBaseline="bottom";
+    ctx.fillText(drag.type==="rot"?Math.round(it.r)+"°":fmt(it.s)+" cm/°",rx,ry-13);}
+  ctx.restore();
+}
+function drawHeat(plan){
+  const S=state,h=R.lux.h,step=5;
+  for(let x=0;x<S.room.L;x+=step)for(let y=0;y<S.room.W;y+=step){
+    const e=luxAt(x+step/2,y+step/2,R.lightOn,h);const t=clamp(e/400,0,1);if(t<0.02)continue;
+    ctx.fillStyle=plan?`hsla(${220-200*t},80%,55%,${0.15+0.45*t})`:`rgba(255,190,90,${0.05+0.4*t})`;rectCm(x,y,step,step);
+  }
+}
+
+/* ================= Interface ================= */
+const $=id=>document.getElementById(id);
+function getP(p){return p.split(".").reduce((o,k)=>o[k],state);}
+function setP(p,v){const ks=p.split(".");let o=state;for(let i=0;i<ks.length-1;i++)o=o[ks[i]];o[ks[ks.length-1]]=v;}
+function syncBound(){
+  document.querySelectorAll("[data-k]").forEach(el=>{const v=getP(el.dataset.k);if(el.type==="checkbox")el.checked=!!v;else if(document.activeElement!==el)el.value=v;});
+  document.querySelectorAll("[data-o]").forEach(el=>{const v=getP(el.dataset.o);el.textContent=Number.isInteger(v)?String(v):fmt(v,2);});
+  renderModeSeg();renderShapes();
+  $("zoomVal").textContent=Math.round(state.view.zoom*100)+" %";
+}
+document.querySelectorAll("[data-k]").forEach(el=>{
+  const ev=(el.type==="checkbox"||el.tagName==="SELECT")?"change":"input";
+  el.addEventListener(ev,()=>{
+    let v;if(el.type==="checkbox")v=el.checked;else if(el.tagName==="SELECT")v=el.value;else{v=parseFloat(el.value);if(!isFinite(v))return;}
+    setP(el.dataset.k,v);
+    if(el.dataset.k==="sameScale"&&v&&state.items.length){const s=state.items[0].s;state.items.forEach(i=>i.s=s);renderItems();}
+    if(el.dataset.k.startsWith("room."))renderItems();
+    if(el.dataset.k==="purl.mode"&&v==="list"&&!state.purl.listEdited&&T&&T.purlW){state.purl.list=T.purl.map((c,i)=>{const w=T.purlW[i],da=c-w/2,db=T.pLen-c-w/2;return da<=db?{ref:"a",d:Math.round(da*2)/2,w}:{ref:"b",d:Math.round(db*2)/2,w};});state.purl.listEdited=true;}
+    if(el.dataset.k==="purl.mode"||el.dataset.k==="panel.dir")renderPurl();
+    document.querySelectorAll(`[data-o="${el.dataset.k}"]`).forEach(o=>o.textContent=Number.isInteger(v)?String(v):fmt(v,2));
+    update();
+  });
+});
+$("modeSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(b.dataset.scene!==undefined){state.view.mode="scene";state.view.scene=+b.dataset.scene;}else state.view.mode="plan";renderModeSeg();update();});
+$("zoomIn").onclick=()=>{state.view.zoom=Math.min(4,Math.round((state.view.zoom+0.25)*100)/100);syncBound();update();};
+$("zoomOut").onclick=()=>{state.view.zoom=Math.max(1,Math.round((state.view.zoom-0.25)*100)/100);syncBound();update();};
+$("tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  document.querySelectorAll("#tabs button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("on",p.dataset.panel===b.dataset.tab));
+  if(b.dataset.tab==="plan")renderPlan();if(b.dataset.tab==="chan")renderChan();if(b.dataset.tab==="fibres")renderShapes();});
+
+/* catalogue */
+function metaOf(c){return `${c.stars.length} étoiles. Hauteur maxi depuis La Réunion : ${Math.round(c.altMax)}°${c.altMax<30?" (basse sur l’horizon nord)":""}. Le mieux placée vers 21 h en ${c.month}.`;}
+(function fillAdd(){const sel=$("addSel");sel.innerHTML=GROUPS.map(([g,keys])=>`<optgroup label="${esc(g)}">${keys.map(k=>`<option value="${k}">${esc(CAT[k].name)} (${CAT[k].stars.length})</option>`).join("")}</optgroup>`).join("");})();
+$("addBtn").onclick=()=>{
+  const key=$("addSel").value;const id="c"+Date.now().toString(36);
+  const s=state.sameScale&&state.items.length?state.items[0].s:8;
+  state.items.push({id,key,x:state.room.L/2,y:state.room.W/2,s,r:0,vis:true});renderItems();update();
+};
+function sliderRow(it,f,label,min,max,step,unit){
+  return `<label class="row"><span>${label}</span><input type="range" data-f="${f}" min="${min}" max="${max}" step="${step}" value="${it[f]}"><input class="num" type="number" data-f="${f}" min="${min}" max="${max}" step="${step}" value="${it[f]}"><em>${unit}</em></label>`;
+}
+function renderItems(){
+  const L=state.room.L,W=state.room.W;
+  $("items").innerHTML=state.items.map(it=>{const c=CAT[it.key];if(!c)return "";
+    const hidden=Object.keys(state.ov).filter(k=>k.startsWith(it.id+":")&&state.ov[k].st==="hide").length;
+    return `<article class="item" data-id="${it.id}">
+      <header><label class="chk" style="margin:0"><input type="checkbox" data-f="vis" ${it.vis?"checked":""}><span><b>${esc(c.name)}</b><br><i>${esc(c.latin)}</i></span></label>
+      <button class="btn danger" data-act="del">Retirer</button></header>
+      <p class="meta">${esc(metaOf(c))}</p>
+      ${sliderRow(it,"x","Position X",0,L,0.5,"cm")}
+      ${sliderRow(it,"y","Position Y",0,W,0.5,"cm")}
+      ${sliderRow(it,"s","Échelle",1,60,0.5,"cm/°")}
+      ${sliderRow(it,"r","Rotation",-180,180,1,"°")}
+      ${hidden?`<button class="btn" data-act="unhide">Réafficher ${hidden} étoile${hidden>1?"s":""} masquée${hidden>1?"s":""}</button>`:""}
+    </article>`;}).join("")||`<p class="muted">Aucune constellation. Ajoutez-en une ci-dessus.</p>`;
+}
+function syncItemInputs(){
+  document.querySelectorAll("#items .item").forEach(art=>{const it=state.items.find(i=>i.id===art.dataset.id);if(!it)return;
+    art.querySelectorAll("input[data-f]").forEach(inp=>{if(inp.dataset.f==="vis"||inp===document.activeElement)return;inp.value=Math.round(it[inp.dataset.f]*10)/10;});});
+}
+$("items").addEventListener("input",e=>{
+  const art=e.target.closest(".item");if(!art)return;const it=state.items.find(i=>i.id===art.dataset.id);const f=e.target.dataset.f;if(!it||!f)return;
+  if(f==="vis"){it.vis=e.target.checked;}
+  else{const v=parseFloat(e.target.value);if(!isFinite(v))return;it[f]=v;if(f==="s"&&state.sameScale)state.items.forEach(o=>o.s=v);}
+  syncItemInputs();update();
+});
+$("items").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-act]");if(!b)return;const art=b.closest(".item");const id=art.dataset.id;
+  if(b.dataset.act==="del"){state.items=state.items.filter(i=>i.id!==id);Object.keys(state.ov).forEach(k=>{if(k.startsWith(id+":"))delete state.ov[k];});if(selKey&&selKey.startsWith(id+":"))selKey=null;}
+  if(b.dataset.act==="unhide"){Object.keys(state.ov).forEach(k=>{if(k.startsWith(id+":")&&state.ov[k].st==="hide")delete state.ov[k].st;});}
+  renderItems();update();
+});
+/* composition recommandée : ciel réel autour de la Voie lactée */
+function galEq(l){const aG=192.85948*DEG,dG=27.12825*DEG,lN=122.93192*DEG,L0=l*DEG;const d=Math.asin(Math.cos(dG)*Math.cos(lN-L0));const a=aG+Math.atan2(Math.sin(lN-L0),-Math.sin(dG)*Math.cos(lN-L0));return [(((a/DEG/15)%24)+24)%24,d/DEG];}
+function stereoP(ra,dec,ra0,dec0){const a=ra*15*DEG,d=dec*DEG,a0=ra0*15*DEG,d0=dec0*DEG,cc=Math.sin(d0)*Math.sin(d)+Math.cos(d0)*Math.cos(d)*Math.cos(a-a0),k=2/(1+cc);
+  return [-k*Math.cos(d)*Math.sin(a-a0)/DEG,-k*(Math.cos(d0)*Math.sin(d)-Math.sin(d0)*Math.cos(d)*Math.cos(a-a0))/DEG];}
+function applyPreset(){
+  const S=state,L=S.room.L,W=S.room.W,keys=["crux_pointers","triangulum","scorpius","sagittarius"],all=[];
+  keys.forEach(k=>CAT[k].stars.forEach(q=>all.push(q)));
+  let sx=0,sy=0,sz=0;all.forEach(q=>{const a=q[1]*15*DEG,d=q[2]*DEG;sx+=Math.cos(d)*Math.cos(a);sy+=Math.cos(d)*Math.sin(a);sz+=Math.sin(d);});
+  const ra0=((Math.atan2(sy,sx)/DEG/15)+24)%24,dec0=Math.atan2(sz,Math.hypot(sx,sy))/DEG;
+  const g1=stereoP(...galEq(300),ra0,dec0),g2=stereoP(...galEq(5),ra0,dec0),ang=Math.atan2(g2[1]-g1[1],g2[0]-g1[0]);
+  const tb=tableRect(),bc=S.assign.border?S.assign.borderCm:0;let best=null;
+  for(const flip of [0,Math.PI]){
+    const A=-ang+flip,c=Math.cos(A),sn=Math.sin(A);
+    const M=(ra,dec)=>{const p=stereoP(ra,dec,ra0,dec0);return [p[0]*c-p[1]*sn,p[0]*sn+p[1]*c];};
+    const pts=all.map(q=>({p:M(q[1],q[2]),mag:q[3]}));
+    const xs=pts.map(q=>q.p[0]),ys=pts.map(q=>q.p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+    const m=12,sc=Math.min((L-2*m)/(x1-x0),(W-2*m)/(y1-y0)),oy=m+((W-2*m)-(y1-y0)*sc)/2-y0*sc,room=Math.max(0,L-2*m-(x1-x0)*sc);
+    for(let sh=0;sh<=room+0.1;sh+=4){
+      const ox=m+sh-x0*sc;let score=0,pen=0;
+      pts.forEach(q=>{if(q.mag>2)return;const x=ox+q.p[0]*sc,y=oy+q.p[1]*sc,dx=Math.max(tb.x0-x,0,x-tb.x1),dy=Math.max(tb.y0-y,0,y-tb.y1);
+        score+=Math.exp(-(dx*dx+dy*dy)/3600);if(Math.min(x,L-x,y,W-y)<bc+4)pen++;});
+      const tot=score-0.7*pen-0.2*Math.abs(sh-room/2)/Math.max(1,room);
+      if(!best||tot>best.tot)best={tot,sc,ox,oy,M};
+    }
+  }
+  const {sc,ox,oy,M}=best,toC=(ra,dec)=>{const p=M(ra,dec);return [ox+p[0]*sc,oy+p[1]*sc];};
+  S.items=keys.map((k,i)=>{const c=CAT[k],[x,y]=toC(c.ra0,c.dec0),n=toC(c.ra0,c.dec0+0.5),nx=n[0]-x,ny=n[1]-y;
+    return {id:"p"+i+Date.now().toString(36),key:k,x:Math.round(x*10)/10,y:Math.round(y*10)/10,s:Math.round(Math.hypot(nx,ny)*2*100)/100,r:Math.round(Math.atan2(nx,-ny)/DEG*10)/10,vis:true};});
+  S.sameScale=false;S.ov={};
+  const sp=S.sizes.filter(z=>z.kind!=="fibre").sort((a,b)=>b.d-a.d),fb=S.sizes.filter(z=>z.kind==="fibre"),big=sp[0]||{},small=sp[1]||{};
+  S.sizes=[{name:"COB 9 W",kind:"spot",n:big.n||10,d:big.d||7,watt:9,lm:big.watt===9&&big.lm?big.lm:800,beam:big.beam||60},
+    {name:"COB 5 W",kind:"spot",n:small.n||10,d:small.d||5.5,watt:5,lm:small.watt===5&&small.lm?small.lm:450,beam:small.beam||60}]
+    .concat(fb.length?fb:[{name:"Fibre 1 mm",kind:"fibre",n:200,d:0.1,core:1}]);
+  Object.assign(S.assign,{center:0,border:true,fgap:1.2,snap:true});
+  const gc=toC(...galEq(0)),gs=toC(...galEq(300)),th=Math.atan2(gc[1]-gs[1],gc[0]-gs[0]),Sl=L/2,cx=gc[0]-0.55*Sl*Math.cos(th),cy=gc[1]-0.55*Sl*Math.sin(th);
+  const wd=5.5*sc/(W*0.76),det=clamp((wd-0.04)/0.22,0,1);
+  Object.assign(S.free,{shape:"milky",px:Math.round(clamp(cx/L*100,0,100)),py:Math.round(clamp(cy/W*100,0,100)),size:100,rot:Math.round(th/DEG),detail:Math.round(det*100),curve:0,contrast:70,bg:18,prio:0,zone:"all",auto:true,sp:4,minD:8,manual:[]});
+  S.chans=[{name:"Croix du Sud et Pointeurs",color:"#F2B33D"},{name:"Scorpion",color:"#E56B6F"},{name:"Sagittaire et Triangle Austral",color:"#6FA8DC"},{name:"Voie lactée (fibres)",color:"#7BC8A4"}];
+  S.rules=[{w:"spots",ch:2},{w:"cons",item:S.items[0].id,ch:0},{w:"cons",item:S.items[2].id,ch:1},{w:"fibres",ch:3}];
+  S.scenes=[{name:"Tout allumé",on:[true,true,true,true]},{name:"Repas",on:[true,true,false,true]},{name:"Soirée",on:[false,true,true,true]},{name:"Tamisé",on:[false,true,false,true]},{name:"Voie lactée",on:[false,false,false,true]},{name:"Éteint",on:[false,false,false,false]}];
+  Object.assign(S.view,{mode:"scene",scene:0,lines:true,cnames:true,unlit:"hide"});
+  selKey=null;selItem=null;
+  optimize();compute();
+  if(R.fibLit.length){const xs=R.fibLit.map(z=>z.x).sort((a,b)=>a-b),ys=R.fibLit.map(z=>z.y).sort((a,b)=>a-b);S.fib.x=Math.round(xs[xs.length>>1]);S.fib.y=Math.round(ys[ys.length>>1]);}
+  syncBound();renderItems();renderSizes();renderPurl();update();
+  if(document.querySelector('.panel[data-panel="chan"]').classList.contains("on"))renderChan();
+}
+$("presetBtn").onclick=applyPreset;
+$("arrangeBtn").onclick=()=>{autoArrange();optimize();renderItems();update();};
+$("optBtn").onclick=()=>{optimize();syncItemInputs();update();};
+$("clearOffBtn").onclick=()=>{Object.values(state.ov).forEach(o=>{delete o.dx;delete o.dy;});update();};
+
+/* tailles */
+function kCell(k){return `<span style="display:inline-flex;gap:6px;align-items:center"><i class="sw" style="background:rgb(${kelvinRgb(k)})"></i><input class="num" type="number" min="1800" max="10000" step="100" data-f="kelvin" value="${k}" aria-label="Température (K)" style="width:90px"></span>`;}
+function renderSizes(){
+  const del=i=>state.sizes.length>1?`<button class="btn danger" data-del="${i}">Supprimer</button>`:"";
+  const used=i=>`<span data-used="${i}">${R&&R.used?R.used[i]||0:0}</span> / ${state.sizes[i].n}`;
+  const rows=state.sizes.map((z,i)=>({z,i}));
+  $("spotBody").innerHTML=rows.filter(o=>o.z.kind!=="fibre").map(({z,i})=>`<tr data-si="${i}">
+    <td><input class="num" data-f="name" value="${esc(z.name)}" aria-label="Nom"></td>
+    <td><input class="num" type="number" min="0" max="500" step="1" data-f="n" value="${z.n}" aria-label="Quantité"></td>
+    <td><input class="num" type="number" min="0" max="300" step="0.5" data-f="watt" value="${z.watt||0}" aria-label="Puissance (W)"></td>
+    <td><input class="num" type="number" min="0" max="20000" step="5" data-f="lm" value="${z.lm||0}" aria-label="Flux (lm)"></td>
+    <td><input class="num" type="number" min="10" max="160" step="1" data-f="beam" value="${z.beam||60}" aria-label="Angle (°)"></td>
+    <td>${kCell(z.kelvin||3000)}</td>
+    <td><input class="num" type="number" min="5" max="300" step="1" data-f="dmm" value="${Math.round(z.d*100)/10}" aria-label="Ø de perçage (mm)"></td>
+    <td>${used(i)}</td><td>${del(i)}</td></tr>`).join("")||`<tr><td colspan="8" class="muted">Aucune ampoule.</td></tr>`;
+  $("fibBody").innerHTML=rows.filter(o=>o.z.kind==="fibre").map(({z,i})=>`<tr data-si="${i}">
+    <td><input class="num" data-f="name" value="${esc(z.name)}" aria-label="Nom"></td>
+    <td><input class="num" type="number" min="0" max="3000" step="1" data-f="n" value="${z.n}" aria-label="Nombre de brins"></td>
+    <td><input class="num" type="number" min="0.1" max="20" step="0.05" data-f="core" value="${z.core||1}" aria-label="Ø de la fibre (mm)"></td>
+    <td><input class="num" type="number" min="0.3" max="30" step="0.1" data-f="dmm" value="${Math.round(z.d*100)/10}" aria-label="Ø de perçage (mm)"></td>
+    <td><input class="num" type="number" min="0" max="500" step="0.5" data-f="pw" value="${z.pw||0}" aria-label="Puissance du projecteur (W)"></td>
+    <td><input class="num" type="number" min="0" max="50000" step="10" data-f="plm" value="${z.plm||""}" placeholder="≈ ${Math.round((z.pw||0)*60)}" aria-label="Flux du projecteur (lm)"></td>
+    <td><select class="num" data-f="cmode" aria-label="Type de lumière"><option value="k"${z.cmode!=="rgb"?" selected":""}>Blanc (Kelvin)</option><option value="rgb"${z.cmode==="rgb"?" selected":""}>Couleur (RGB)</option></select></td>
+    <td>${z.cmode==="rgb"?`<input type="color" data-f="color" value="${esc(z.color||"#EEF3FF")}" aria-label="Couleur">`:kCell(z.kelvin||6000)}</td>
+    <td>${used(i)}</td><td>${del(i)}</td></tr>`).join("")||`<tr><td colspan="10" class="muted">Aucune fibre.</td></tr>`;
+}
+function sizeEdit(e){
+  const tr=e.target.closest("tr");if(!tr)return;const i=+tr.dataset.si,f=e.target.dataset.f,z=state.sizes[i];if(!f||!z)return;
+  if(f==="name")z.name=e.target.value||("Type "+(i+1));
+  else if(f==="kind"){if(z.kind===e.target.value)return;z.kind=e.target.value;if(z.kind==="fibre"){z.d=0.1;z.core=1;}else{z.d=5;z.lm=z.lm||400;z.beam=z.beam||60;}renderSizes();}
+  else if(f==="magMax"&&e.target.value.trim()===""){delete z.magMax;}
+  else if(f==="color"){z.color=e.target.value;}
+  else if(f==="cmode"){z.cmode=e.target.value;}
+  else if(f==="plm"&&e.target.value.trim()===""){delete z.plm;}
+  else{const v=parseFloat(e.target.value);if(!isFinite(v))return;if(f==="dmm")z.d=v/10;else z[f]=v;}
+  update();
+}
+["spotBody","fibBody"].forEach(id=>{$(id).addEventListener("input",sizeEdit);$(id).addEventListener("change",e=>{if(["n","kelvin","cmode","pw"].includes(e.target.dataset.f)){clearTimeout(window.__rs);window.__rs=setTimeout(renderSizes,0);}});$(id).addEventListener("click",sizeDel);});
+function sizeDel(e){
+  const b=e.target.closest("button[data-del]");if(!b)return;const k=+b.dataset.del;state.sizes.splice(k,1);if(state.view.layerOff)state.view.layerOff.splice(k,1);
+  Object.values(state.ov).forEach(o=>{if(typeof o.st==="number"){if(o.st===k)delete o.st;else if(o.st>k)o.st--;}});
+  (state.rules||[]).forEach(r=>{if(r.w==="size"){if(r.size===k)r.w="spots";else if(r.size>k)r.size--;}});
+  renderSizes();update();
+}
+$("addSize").onclick=()=>{if(state.sizes.length>=8)return;state.sizes.push({name:"Ampoule "+(state.sizes.length+1),kind:"spot",n:5,d:5,watt:5,lm:400,beam:60});renderSizes();update();};
+$("addFib").onclick=()=>{if(state.sizes.length>=8)return;state.sizes.push({name:"Fibre "+(state.sizes.length+1),kind:"fibre",n:100,d:0.1,core:1,pw:16,cmode:"k",kelvin:6000,color:"#EEF3FF"});renderSizes();update();};
+/* pannes C une par une */
+function purlWalls(){const xa=T?T.pAxis==="x":state.panel.dir==="y";return xa?["mur A (à gauche)","mur opposé (à droite)"]:["mur B (en haut)","mur opposé (en bas)"];}
+function renderPurl(){
+  const m=state.purl.mode;document.querySelectorAll("[data-pm]").forEach(el=>{el.hidden=!el.dataset.pm.split(" ").includes(m);});
+  if(m!=="list")return;
+  const [wa,wb]=purlWalls();
+  $("purlListHelp").textContent=`Pour chaque panne, mesurez depuis le ${wa.split(" (")[0]} ou le ${wb.split(" (")[0]} jusqu’au bord de la panne le plus proche de ce mur. Gauche et droite s’entendent en vue de dessous, assis à table.`;
+  $("purlList").innerHTML=state.purl.list.map((q,i)=>`<tr data-pi="${i}"><td>P${i+1}</td><td><select class="num" data-f="ref"><option value="a"${q.ref!=="b"?" selected":""}>${esc(wa)}</option><option value="b"${q.ref==="b"?" selected":""}>${esc(wb)}</option></select></td><td><input class="num" type="number" min="0" max="2000" step="0.5" data-f="d" value="${q.d}"></td><td><input class="num" type="number" min="0.5" max="40" step="0.5" data-f="w" value="${q.w}"></td><td><button class="btn danger" data-del="${i}" aria-label="Supprimer P${i+1}">×</button></td></tr>`).join("")||`<tr><td colspan="5" class="muted">Aucune panne : ajoutez-en une.</td></tr>`;
+}
+function purlEdit(e){const tr=e.target.closest("tr[data-pi]");if(!tr)return;const q=state.purl.list[+tr.dataset.pi],f=e.target.dataset.f;if(!q||!f)return;
+  if(f==="ref")q.ref=e.target.value;else{const v=parseFloat(e.target.value);if(!isFinite(v))return;q[f]=v;}state.purl.listEdited=true;update();}
+$("purlList").addEventListener("input",purlEdit);$("purlList").addEventListener("change",purlEdit);
+$("purlList").addEventListener("click",e=>{const b=e.target.closest("button[data-del]");if(!b)return;state.purl.list.splice(+b.dataset.del,1);state.purl.listEdited=true;renderPurl();update();});
+$("purlAdd").onclick=()=>{const l=state.purl.list,last=l[l.length-1];l.push({ref:"a",d:last&&last.ref!=="b"?last.d+120:60,w:last?last.w:6});state.purl.listEdited=true;renderPurl();update();};
+$("centerTable").onclick=()=>{state.table.cx=state.room.L/2;state.table.cy=state.room.W/2;syncBound();update();};
+
+/* sélection */
+function renderSel(){
+  const box=$("selBox");const st=selKey&&R&&R.byKey[selKey];const it=!st&&selItem&&itemOf(selItem);
+  if(!st&&!it){box.hidden=true;return;}box.hidden=false;
+  if(it){
+    $("selName").textContent=CAT[it.key].name.split(" :")[0];
+    $("selMeta").textContent=`Position ${fmt(it.x,0)} ; ${fmt(it.y,0)} cm, rotation ${Math.round(it.r)}°, échelle ${fmt(it.s)} cm/°. Glissez l’intérieur du cadre pour déplacer, la poignée ronde pour pivoter, un coin pour agrandir.`;
+    $("selStWrap").hidden=true;$("selChWrap").hidden=true;$("selReset").hidden=true;$("selDel").hidden=true;return;
+  }
+  $("selStWrap").hidden=false;$("selReset").hidden=false;$("selDel").hidden=!st.manual;
+  $("selName").textContent=st.name;
+  let m=st.free?(st.manual?"fibre ajoutée à la main":st.spotFill?"étoile de fond (ampoule)":"fibre de fond"):`${CAT[st.item.key].name.split(" :")[0]}, magnitude ${fmt(st.mag,2)}`;
+  if(st.lit){m+=`, ${state.sizes[st.size].name}, ${(state.chans[st.ch]||{}).name||""}${isFib(st.size)?" (canal du projecteur)":""}, trou n° ${st.no} : X ${fmt(st.x)} cm, Y ${fmt(st.y)} cm`;if(st.snap>0.3)m+=`, décalée de ${fmt(st.snap)} cm`;if(st.conf)m+=`. Conflit : ${st.conf}`;}
+  else m+=`, sans lumière (${st.reason})`;
+  $("selMeta").textContent=m;
+  const sel=$("selSt");const cur=st.ov.st;
+  sel.innerHTML=`<option value="auto">Automatique</option>${state.sizes.map((s,i)=>`<option value="${i}">${esc(s.name)}</option>`).join("")}<option value="phos">Sans lumière (non percée)</option><option value="hide">${st.free&&!st.manual?"Retirer (une autre est tirée)":"Masquer cette étoile"}</option>`;
+  sel.value=cur===undefined?"auto":String(cur);
+  const chw=$("selChWrap");
+  if(st.lit&&!isFib(st.size)){chw.hidden=false;const sc=$("selCh");sc.innerHTML=`<option value="auto">Selon les règles</option>`+chOpts(-1);sc.value=typeof st.ov.ch==="number"?String(st.ov.ch):"auto";}else chw.hidden=true;
+}
+function deleteManual(key){const id=key.slice(2);state.free.manual=state.free.manual.filter(m=>m.id!==id);delete state.ov[key];selKey=null;update();}
+$("selDel").onclick=()=>{if(selKey&&selKey.startsWith("m:"))deleteManual(selKey);};
+$("selSt").onchange=e=>{
+  if(!selKey)return;const v=e.target.value;const ov=state.ov[selKey]||(state.ov[selKey]={});
+  if(v==="auto")delete ov.st;else if(v==="phos"||v==="hide")ov.st=v;else ov.st=+v;
+  if(v==="hide"){selKey=null;renderItems();}
+  update();
+};
+$("selCh").onchange=e=>{if(!selKey)return;const ov=state.ov[selKey]||(state.ov[selKey]={});if(e.target.value==="auto")delete ov.ch;else ov.ch=+e.target.value;update();};
+$("selReset").onclick=()=>{if(selKey&&state.ov[selKey]){delete state.ov[selKey].dx;delete state.ov[selKey].dy;update();}};
+
+/* glisser, cadre de transformation */
+let drag=null,selItem=null,TOUCH=false;
+function itemOf(id){return state.items.find(i=>i.id===id);}
+function evPos(e){const r=cv.getBoundingClientRect();return {mx:e.clientX-r.left,my:e.clientY-r.top};}
+function toWorld(mx,my){let x=(mx-G.padL)/G.k;if(state.view.mirror)x=state.room.L-x;return {x,y:(my-G.padT)/G.k};}
+function hit(mx,my){
+  if(!R)return null;let best=null,bd=Infinity;
+  R.stars.forEach(st=>{if(!st.lit&&state.view.unlit!=="show")return;const d=Math.hypot(X(st.x)-mx,Y(st.y)-my);const lim=Math.max(TOUCH?20:11,st.r*G.k+5);if(d<lim&&d<bd){bd=d;best=st;}});
+  return best;
+}
+function itemAt(w){
+  const list=state.items.filter(i=>i.vis&&CAT[i.key]);const sel=selItem&&itemOf(selItem);if(sel&&sel.vis)list.unshift(sel);
+  for(const it of list){
+    const b=bboxDeg(CAT[it.key],0),r=it.r*DEG,co=Math.cos(r),si=Math.sin(r),p=14/(G.k*it.s);
+    const dx=(w.x-it.x)/it.s,dy=(w.y-it.y)/it.s,u=dx*co+dy*si,v=-dx*si+dy*co;
+    if(u>=b.x0-p&&u<=b.x1+p&&v>=b.y0-p&&v<=b.y1+p)return it;
+  }
+  return null;
+}
+function gzHit(mx,my){
+  const it=selItem&&itemOf(selItem);if(!it||!it.vis||!CAT[it.key])return null;const g=gzGeom(it);
+  const d=q=>Math.hypot(X(q.x)-mx,Y(q.y)-my);
+  if(d(g.rot)<(TOUCH?24:14))return {type:"rot",it,g};
+  for(const c of g.corners)if(d(c)<(TOUCH?22:13))return {type:"scale",it,g};
+  return null;
+}
+function recentre(it,g,C){const b=g.b,r=it.r*DEG,co=Math.cos(r),si=Math.sin(r);it.x=Math.round((C.x-it.s*(b.cx*co-b.cy*si))*10)/10;it.y=Math.round((C.y-it.s*(b.cx*si+b.cy*co))*10)/10;}
+cv.addEventListener("pointerdown",e=>{
+  TOUCH=e.pointerType!=="mouse";
+  const {mx,my}=evPos(e);const w=toWorld(mx,my);const gh=gzHit(mx,my);
+  if(gh){const C=gh.g.C;drag={gz:true,type:gh.type,it:gh.it,C,g:gh.g,r0:gh.it.r,s0:gh.it.s,a0:Math.atan2(w.y-C.y,w.x-C.x),d0:Math.max(1,Math.hypot(w.x-C.x,w.y-C.y))};}
+  else if(state.view.cable&&Math.abs(X(state.elec.x)-mx)<10&&Math.abs(Y(state.elec.y)-my)<10){drag={type:"elec",mx,my,ox:state.elec.x,oy:state.elec.y};}
+  else if(state.view.fibroute&&Math.hypot(X(state.fib.x)-mx,Y(state.fib.y)-my)<11){drag={type:"fib",mx,my,ox:state.fib.x,oy:state.fib.y};}
+  else{
+    const st=hit(mx,my);
+    if(st){
+      selKey=st.key;selItem=st.item?st.item.id:null;const ov=state.ov[st.key]||{};
+      const single=!st.item||e.shiftKey||state.view.single;
+      drag={type:single?"star":"move",key:st.key,it:st.item,mx,my,ox:st.item?st.item.x:0,oy:st.item?st.item.y:0,odx:ov.dx||0,ody:ov.dy||0};
+    }else if(state.view.addFree&&w.x>2&&w.x<state.room.L-2&&w.y>2&&w.y<state.room.W-2){
+      const id=Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+      state.free.manual.push({id,x:Math.round(w.x*2)/2,y:Math.round(w.y*2)/2});selKey="m:"+id;selItem=null;update();return;
+    }else{
+      const it=itemAt(w);
+      if(it){selItem=it.id;selKey=null;drag={type:"move",it,mx,my,ox:it.x,oy:it.y};}
+      else{selItem=null;selKey=null;drag={type:"pan",sx:e.clientX,sy:e.clientY,sl:wrap.scrollLeft,st:window.scrollY};}
+    }
+  }
+  cv.setPointerCapture(e.pointerId);cv.classList.add("dragging");update(true);
+});
+function setCursor(mx,my){
+  const h=gzHit(mx,my);if(h){cv.style.cursor=h.type==="rot"?"crosshair":"nwse-resize";return;}
+  if(state.view.cable&&Math.abs(X(state.elec.x)-mx)<10&&Math.abs(Y(state.elec.y)-my)<10){cv.style.cursor="move";return;}
+  if(hit(mx,my)||itemAt(toWorld(mx,my)))cv.style.cursor="move";else cv.style.cursor=state.view.addFree?"copy":"default";
+}
+cv.addEventListener("pointermove",e=>{
+  const {mx,my}=evPos(e);
+  if(!drag){if(e.pointerType==="mouse")setCursor(mx,my);return;}
+  if(drag.type==="pan"){wrap.scrollLeft=drag.sl-(e.clientX-drag.sx);window.scrollTo(0,drag.st-(e.clientY-drag.sy));return;}
+  const w=toWorld(mx,my),dx=(mx-drag.mx)/G.k*(state.view.mirror?-1:1),dy=(my-drag.my)/G.k;
+  if(drag.type==="rot"){
+    let r=drag.r0+(Math.atan2(w.y-drag.C.y,w.x-drag.C.x)-drag.a0)/DEG;r=e.shiftKey?Math.round(r/15)*15:Math.round(r);r=((r%360)+540)%360-180;
+    drag.it.r=r;recentre(drag.it,drag.g,drag.C);syncItemInputs();
+  }else if(drag.type==="scale"){
+    const sc=clamp(Math.round(drag.s0*Math.hypot(w.x-drag.C.x,w.y-drag.C.y)/drag.d0*10)/10,1,80);
+    drag.it.s=sc;recentre(drag.it,drag.g,drag.C);if(state.sameScale)state.items.forEach(o=>{if(o!==drag.it)o.s=sc;});syncItemInputs();
+  }else if(drag.type==="elec"){state.elec.x=Math.round(clamp(drag.ox+dx,0,state.room.L));state.elec.y=Math.round(clamp(drag.oy+dy,0,state.room.W));}
+  else if(drag.type==="fib"){state.fib.x=Math.round(clamp(drag.ox+dx,0,state.room.L));state.fib.y=Math.round(clamp(drag.oy+dy,0,state.room.W));}
+  else if(drag.type==="star"){const ov=state.ov[drag.key]||(state.ov[drag.key]={});ov.dx=Math.round((drag.odx+dx)*2)/2;ov.dy=Math.round((drag.ody+dy)*2)/2;}
+  else{drag.it.x=Math.round((drag.ox+dx)*2)/2;drag.it.y=Math.round((drag.oy+dy)*2)/2;syncItemInputs();}
+  update(true);
+});
+function endDrag(){if(!drag)return;const t=drag.type;drag=null;cv.classList.remove("dragging");if(t==="pan")return;if(t==="elec"||t==="fib")syncBound();update();}
+cv.addEventListener("pointerup",endDrag);cv.addEventListener("pointercancel",endDrag);
+cv.addEventListener("keydown",e=>{
+  const st=selKey&&R&&R.byKey[selKey];const it=st?st.item:(selItem&&itemOf(selItem));if(!st&&!it)return;
+  const map={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]},d=map[e.key];
+  if(d){e.preventDefault();const sx=d[0]*(state.view.mirror?-1:1);
+    if(st&&(!st.item||e.shiftKey||state.view.single)){const ov=state.ov[selKey]||(state.ov[selKey]={});ov.dx=(ov.dx||0)+sx;ov.dy=(ov.dy||0)+d[1];}
+    else if(it){it.x+=sx;it.y+=d[1];syncItemInputs();}
+    update();return;}
+  if((e.key==="Delete"||e.key==="Backspace")&&st&&st.manual){e.preventDefault();deleteManual(selKey);return;}
+  if(!it)return;
+  if(e.key==="q"||e.key==="e"){e.preventDefault();const g=gzGeom(it);it.r=((it.r+(e.key==="e"?1:-1))%360+540)%360-180;recentre(it,g,g.C);syncItemInputs();update();}
+  if(e.key==="+"||e.key==="-"){e.preventDefault();const g=gzGeom(it);it.s=clamp(it.s+(e.key==="+"?0.5:-0.5),1,80);recentre(it,g,g.C);if(state.sameScale)state.items.forEach(o=>o.s=it.s);syncItemInputs();update();}
+});
+
+/* étoiles décoratives */
+/* ciel de fibres */
+const SHAPES=[["uniform","Ciel uniforme","Fibres réparties sur tout le plafond, comme un ciel profond.",""],
+  ["milky","Voie lactée","Un ruban dense qui traverse le plafond, plus large d’un côté (le cœur de la galaxie) et fendu par une faille sombre, entouré d’étoiles éparses.","Largeur de la bande"],
+  ["galaxy","Galaxie spirale","Un noyau lumineux et des bras en spirale bien dessinés, vus de biais.","Nombre de bras"],
+  ["nebula","Nébuleuse","Un nuage irrégulier aux contours doux.","Nombre de lobes"],
+  ["clusters","Nuages d’étoiles","Plusieurs petits amas serrés, séparés par du vide.","Nombre d’amas"],
+  ["vortex","Tourbillon","Des traînées qui s’enroulent autour d’un centre.","Torsion"]];
+const FAVK=["shape","seed","px","py","size","rot","detail","contrast","bg","prio","zone","band","sp","minD","auto","n","curve","tilt"];
+function renderShapes(){
+  const F=state.free,sh=SHAPES.find(q=>q[0]===F.shape)||SHAPES[0];
+  $("shapeSeg").innerHTML=SHAPES.map(([v,l])=>`<button class="btn" data-shape="${v}" aria-pressed="${F.shape===v}">${l}</button>`).join("");
+  $("shapeDesc").textContent=sh[2];$("detailLbl").textContent=sh[3]||"Détail";
+  document.querySelectorAll("[data-shapeonly]").forEach(el=>{el.hidden=F.shape==="uniform";});document.querySelectorAll("[data-shapes]").forEach(el=>{el.hidden=!el.dataset.shapes.split(" ").includes(F.shape);});$("uniformNote").hidden=F.shape!=="uniform";
+  renderFavs();
+}
+function prioText(){const p=state.free.prio;return p>10?`Plus de fibres vers le centre (${p}).`:p<-10?`Plus de fibres vers les murs (${-p}).`:"Répartition neutre entre murs et centre.";}
+$("shapeSeg").addEventListener("click",e=>{const b=e.target.closest("button[data-shape]");if(!b)return;state.free.shape=b.dataset.shape;renderShapes();update();});
+$("seedPrev").onclick=()=>{state.free.seed=(Math.round(state.free.seed)+100)%101;syncBound();update();};
+$("seedNext").onclick=()=>{state.free.seed=(Math.round(state.free.seed)+1)%101;syncBound();update();};
+$("seedRand").onclick=()=>{state.free.seed=Math.floor(Math.random()*101);syncBound();update();};
+function renderFavs(){
+  $("favList").innerHTML=state.favs.length?`<table><tbody>${state.favs.map((f,i)=>`<tr data-fi="${i}"><td><input class="num" data-f="name" value="${esc(f.name)}" aria-label="Nom"></td><td style="white-space:nowrap"><button class="btn" data-load="${i}">Reprendre</button> <button class="btn danger" data-del="${i}" aria-label="Supprimer">×</button></td></tr>`).join("")}</tbody></table>`:`<p class="note" style="margin-top:0">Aucune disposition mémorisée.</p>`;
+}
+$("favSave").onclick=()=>{const F=state.free,sh=(SHAPES.find(q=>q[0]===F.shape)||SHAPES[0])[1];const o={name:`${sh} n° ${Math.round(F.seed)}`};FAVK.forEach(k=>{o[k]=F[k];});state.favs.push(o);renderFavs();update();};
+$("favList").addEventListener("input",e=>{const tr=e.target.closest("tr[data-fi]");if(!tr)return;state.favs[+tr.dataset.fi].name=e.target.value;saveSoon();commitSoon();});
+$("favList").addEventListener("click",e=>{const ld=e.target.closest("button[data-load]"),dl=e.target.closest("button[data-del]");
+  if(ld){const f=state.favs[+ld.dataset.load];FAVK.forEach(k=>{if(f[k]!==undefined)state.free[k]=f[k];});syncBound();update();}
+  else if(dl){state.favs.splice(+dl.dataset.del,1);renderFavs();update();}});
+
+/* canaux et ambiances */
+const PALETTE=["#F2B33D","#E56B6F","#6FA8DC","#7BC8A4","#B39DDB","#F49AC2","#9CCC65","#4DD0E1"];
+const RULES=[["spots","Tous les spots"],["fibres","Toutes les fibres"],["size","Un type de lumière"],["cons","Une constellation"],["bright","Les plus brillantes"],["table","Spots au-dessus de la table"],["near","Spots au-dessus ou autour de la table (30 cm)"],["out","Spots hors de la table"],["center","Spots de la zone centrale"],["edges","Spots près des murs (60 cm)"]];
+function chOpts(sel){return state.chans.map((c,i)=>`<option value="${i}"${i===sel?" selected":""}>${esc(c.name)}</option>`).join("");}
+function renderModeSeg(){const V=state.view;$("modeSeg").innerHTML=state.scenes.map((sc,i)=>`<button data-scene="${i}" aria-pressed="${V.mode!=="plan"&&V.scene===i}">${esc(sc.name)}</button>`).join("")+`<span class="sep" aria-hidden="true"></span><button data-mode="plan" aria-pressed="${V.mode==="plan"}">Plan de pose</button>`;}
+function renderChan(){
+  if(!R)return;const S=state,ae=document.activeElement;
+  if(ae&&ae.closest&&ae.closest('[data-panel="chan"]')&&ae.tagName==="INPUT"&&(ae.type==="text"||ae.type==="number"))return;
+  const watt=list=>list.reduce((a,z)=>a+(S.sizes[z.size].watt||0),0);
+  $("chBody").innerHTML=S.chans.map((c,i)=>{const sp=R.spotLit.filter(z=>z.ch===i),fb=R.fibLit.filter(z=>z.ch===i),w=powerOf(sp,fb);
+    return `<tr data-ci="${i}"><td>${i+1}</td><td><input class="num" data-f="name" value="${esc(c.name)}" aria-label="Nom du canal"></td><td><input type="color" data-f="color" value="${esc(c.color)}" aria-label="Couleur"></td><td>${sp.length}</td><td>${fb.length}</td><td>${w?fmt(w,0)+" W":"—"}</td><td>${S.chans.length>1?`<button class="btn danger" data-del="${i}">Supprimer</button>`:""}</td></tr>`;}).join("");
+  $("ruleBody").innerHTML=S.rules.map((r,i)=>{let p=`<span class="muted">—</span>`;
+    if(r.w==="size")p=`<select class="num" data-f="size">${S.sizes.map((z,k)=>`<option value="${k}"${k===r.size?" selected":""}>${esc(z.name)}</option>`).join("")}</select>`;
+    else if(r.w==="cons")p=`<select class="num" data-f="item">${S.items.map(it=>`<option value="${it.id}"${it.id===r.item?" selected":""}>${esc(CAT[it.key].name.split(" :")[0])}</option>`).join("")}</select>`;
+    else if(r.w==="bright")p=`<input class="num" type="number" min="1" max="300" step="1" data-f="n" value="${r.n||5}" style="width:80px" aria-label="Nombre"> étoiles`;
+    return `<tr data-ri="${i}"><td>${i+1}</td><td><select class="num" data-f="w">${RULES.map(([v,l])=>`<option value="${v}"${v===r.w?" selected":""}>${l}</option>`).join("")}</select></td><td>${p}</td><td><select class="num" data-f="ch">${chOpts(r.ch)}</select></td><td style="white-space:nowrap"><button class="btn" data-mv="-1" aria-label="Monter">↑</button> <button class="btn" data-mv="1" aria-label="Descendre">↓</button> <button class="btn danger" data-del="${i}" aria-label="Supprimer">×</button></td></tr>`;}).join("")||`<tr><td colspan="5" class="muted">Aucune règle : tout est sur le premier canal.</td></tr>`;
+  $("scHead").innerHTML=`<tr><th>Ambiance</th>${S.chans.map(c=>`<th><i class="sw" style="background:${esc(c.color)}"></i> ${esc(c.name)}</th>`).join("")}<th>Lumières</th><th>Puissance</th><th>Table</th><th></th></tr>`;
+  const tb=tableRect();
+  $("scBody").innerHTML=S.scenes.map((sc,i)=>{const on=R.spotLit.filter(z=>sc.on[z.ch]),onF=R.fibLit.filter(z=>sc.on[z.ch]),w=powerOf(on,onF),lx=luxStats(on.concat(onF),tb).avg;
+    return `<tr data-sc="${i}"><td><input class="num" data-f="name" value="${esc(sc.name)}" aria-label="Nom de l’ambiance"></td>${S.chans.map((c,j)=>`<td><input type="checkbox" data-ch="${j}"${sc.on[j]?" checked":""} aria-label="${esc(c.name)}"></td>`).join("")}<td>${on.length} spots, ${onF.length} fibres</td><td>${fmt(w,0)} W</td><td>≈ ${Math.round(lx)} lux</td><td style="white-space:nowrap"><button class="btn" data-show="${i}">Voir</button> ${S.scenes.length>1?`<button class="btn danger" data-del="${i}" aria-label="Supprimer">×</button>`:""}</td></tr>`;}).join("");
+}
+$("chBody").addEventListener("input",e=>{const tr=e.target.closest("tr[data-ci]");if(!tr)return;const c=state.chans[+tr.dataset.ci],f=e.target.dataset.f;if(!c||!f)return;c[f]=e.target.value;renderModeSeg();update();});
+$("chBody").addEventListener("change",()=>renderChan());
+$("chBody").addEventListener("click",e=>{const b=e.target.closest("button[data-del]");if(!b)return;const i=+b.dataset.del,S=state;
+  S.chans.splice(i,1);S.scenes.forEach(sc=>sc.on.splice(i,1));S.rules.forEach(r=>{if(r.ch===i)r.ch=0;else if(r.ch>i)r.ch--;});
+  Object.values(S.ov).forEach(o=>{if(typeof o.ch==="number"){if(o.ch===i)delete o.ch;else if(o.ch>i)o.ch--;}});
+  renderModeSeg();update();renderChan();});
+$("chAdd").onclick=()=>{const S=state;if(S.chans.length>=8)return;S.chans.push({name:"Canal "+(S.chans.length+1),color:PALETTE[S.chans.length%PALETTE.length]});
+  S.scenes.forEach(sc=>{sc.on.push(sc.on.length>0&&sc.on.every(Boolean));});update();renderChan();};
+$("ruleBody").addEventListener("change",e=>{const tr=e.target.closest("tr[data-ri]");if(!tr)return;const r=state.rules[+tr.dataset.ri],f=e.target.dataset.f;if(!r||!f)return;
+  if(f==="w"){r.w=e.target.value;if(r.w==="size"&&r.size===undefined)r.size=0;if(r.w==="cons"&&!r.item&&state.items[0])r.item=state.items[0].id;if(r.w==="bright"&&!r.n)r.n=5;}
+  else if(f==="item")r.item=e.target.value;else{const v=parseInt(e.target.value,10);if(!isFinite(v))return;r[f]=v;}
+  update();renderChan();});
+$("ruleBody").addEventListener("input",e=>{if(e.target.dataset.f!=="n")return;const tr=e.target.closest("tr[data-ri]");const v=parseInt(e.target.value,10);if(!tr||!(v>0))return;state.rules[+tr.dataset.ri].n=v;update();});
+$("ruleBody").addEventListener("click",e=>{const tr=e.target.closest("tr[data-ri]");if(!tr)return;const i=+tr.dataset.ri,L2=state.rules,mv=e.target.closest("button[data-mv]"),del=e.target.closest("button[data-del]");
+  if(mv){const j=i+(+mv.dataset.mv);if(j<0||j>=L2.length)return;const t=L2[i];L2[i]=L2[j];L2[j]=t;}else if(del)L2.splice(i,1);else return;update();renderChan();});
+$("ruleAdd").onclick=()=>{state.rules.push({w:"spots",ch:0});update();renderChan();};
+$("scBody").addEventListener("input",e=>{if(e.target.dataset.f!=="name")return;const tr=e.target.closest("tr[data-sc]");if(!tr)return;state.scenes[+tr.dataset.sc].name=e.target.value||"Ambiance";renderModeSeg();saveSoon();commitSoon();});
+$("scBody").addEventListener("change",e=>{const tr=e.target.closest("tr[data-sc]");if(!tr)return;const sc=state.scenes[+tr.dataset.sc];
+  if(e.target.dataset.ch!==undefined){sc.on[+e.target.dataset.ch]=e.target.checked;update();}renderChan();});
+$("scBody").addEventListener("click",e=>{const tr=e.target.closest("tr[data-sc]");if(!tr)return;const i=+tr.dataset.sc,sh=e.target.closest("button[data-show]"),del=e.target.closest("button[data-del]");
+  if(sh){state.view.mode="scene";state.view.scene=i;renderModeSeg();update();}
+  else if(del){state.scenes.splice(i,1);if(state.view.scene>=state.scenes.length)state.view.scene=state.scenes.length-1;renderModeSeg();update();renderChan();}});
+$("scAdd").onclick=()=>{state.scenes.push({name:"Ambiance "+(state.scenes.length+1),on:state.chans.map(()=>true)});renderModeSeg();update();renderChan();};
+$("freeFreeze").onclick=()=>{
+  compute();
+  R.stars.filter(s=>s.free&&!s.manual).forEach(s=>{const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+    state.free.manual.push({id,x:Math.round(s.bx*2)/2,y:Math.round(s.by*2)/2});if(s.ov.st!==undefined)state.ov["m:"+id]={st:s.ov.st};});
+  Object.keys(state.ov).forEach(k=>{if(k.startsWith("g:"))delete state.ov[k];});state.free.n=0;syncBound();update();
+};
+$("freeClear").onclick=()=>{state.free.manual=[];Object.keys(state.ov).forEach(k=>{if(k.startsWith("m:"))delete state.ov[k];});if(selKey&&selKey.startsWith("m:"))selKey=null;update();};
+
+/* historique */
+let hist=[],hIdx=-1,histT=null;
+function snapState(){const o=clone(state);delete o.view;return JSON.stringify(o);}
+function commit(){const sn=snapState();if(hist[hIdx]===sn)return;hist=hist.slice(0,hIdx+1);hist.push(sn);if(hist.length>100)hist.shift();hIdx=hist.length-1;updHist();}
+function commitSoon(){clearTimeout(histT);histT=setTimeout(commit,500);}
+function updHist(){$("undoBtn").disabled=hIdx<=0;$("redoBtn").disabled=hIdx>=hist.length-1;}
+function restore(i){const view=state.view;state=merge(clone(DEFAULT),JSON.parse(hist[i]));state.view=view;hIdx=i;selKey=null;selItem=null;syncBound();renderItems();renderSizes();update(false,true);renderPurl();updHist();}
+$("undoBtn").onclick=()=>{clearTimeout(histT);commit();if(hIdx>0)restore(hIdx-1);};
+$("redoBtn").onclick=()=>{if(hIdx<hist.length-1)restore(hIdx+1);};
+document.addEventListener("keydown",e=>{
+  if(!(e.ctrlKey||e.metaKey))return;const t=e.target;if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.tagName==="SELECT"))return;
+  const k=e.key.toLowerCase();
+  if(k==="z"&&!e.shiftKey){e.preventDefault();$("undoBtn").click();}
+  else if(k==="y"||(k==="z"&&e.shiftKey)){e.preventDefault();$("redoBtn").click();}
+});
+
+/* statistiques */
+const TYPECOL=["#FF8A3D","#FFD23F","#4CC9F0","#C792FF","#7CFFB2","#FF5C8A","#A3E635","#F9A8D4"];
+function typeCol(k){return TYPECOL[k%TYPECOL.length];}
+function renderLayers(){
+  const V=state.view,lo=V.layerOff||[];
+  $("layerBar").innerHTML=`<span class="lbl">Calques</span>`+state.sizes.map((z,i)=>`<label><input type="checkbox" data-layer="${i}"${lo[i]?"":" checked"}>${V.typecol?`<i class="sw" style="background:${typeCol(i)}"></i>`:""}${esc(z.name)} <span class="cnt">${R?R.used[i]||0:0}</span></label>`).join("")+`<button class="tbtn" data-all="1">Tout afficher</button><span class="sep" aria-hidden="true"></span><label><input type="checkbox" data-typecol="1"${V.typecol?" checked":""}> Code couleur des types (repérage seulement)</label>`;
+}
+$("layerBar").addEventListener("change",e=>{const V=state.view;
+  if(e.target.dataset.layer!==undefined){const lo=V.layerOff||(V.layerOff=[]);lo[+e.target.dataset.layer]=!e.target.checked;}
+  else if(e.target.dataset.typecol)V.typecol=e.target.checked;else return;
+  update();});
+$("layerBar").addEventListener("click",e=>{if(!e.target.closest("button[data-all]"))return;state.view.layerOff=[];update();});
+function luxVerdict(l){return l<100?["pas assez éclairé",true]:l<200?["un peu juste",false]:l<=500?["bien pour une table",false]:l<=800?["très lumineux",false]:["trop lumineux",true];}
+function tableChips(){
+  const S=state,ref=R.luxAll.avg,[v,bad]=luxVerdict(ref);let h=`<span class="chip ${bad?"bad":"good"}">Tout allumé (100 %) : <b>≈ ${Math.round(ref)} lux</b> sur la table, ${v}</span>`;
+  if(S.view.mode!=="plan"){const sc=S.scenes[S.view.scene];if(sc&&ref>0)h+=`<span class="chip">« ${esc(sc.name)} » : <b>${Math.round(R.lux.avg/ref*100)} %</b> de l’éclairage de référence</span>`;}
+  return h;
+}
+function renderStats(){
+  document.querySelectorAll("[data-used]").forEach(el=>{el.textContent=R.used[+el.dataset.used]||0;});
+  const S=state,out=[];
+  if(S.view.mode!=="plan"){const sc=S.scenes[S.view.scene];if(sc){const w=powerOf(R.spotOn,R.fibOn);out.push(`<span class="chip good">« ${esc(sc.name)} » : <b>${R.spotOn.length}</b> spots et <b>${R.fibOn.length}</b> fibres allumés${w?`, ${fmt(w,0)} W`:""}${(S.view.layerOff||[]).some(Boolean)?" (calques filtrés)":""}</span>`);}}
+  renderLayers();
+  $("prioTxt").textContent=prioText();
+  S.sizes.forEach((z,k)=>{const u=R.used[k];out.push(`<span class="chip ${u>z.n?"bad":""}">${esc(z.name)} (Ø ${fmtD(z.d)}) : <b>${u}</b> / ${z.n}</span>`);});
+  const unlit=R.stars.filter(z=>!z.lit).length,conf=R.lit.filter(z=>z.conf).length;
+  if(unlit)out.push(`<span class="chip">Sans lumière : <b>${unlit}</b></span>`);
+  out.push(`<span class="chip ${conf?"bad":"good"}">Conflits : <b>${conf}</b></span>`);
+  const mx=R.lit.reduce((a,z)=>Math.max(a,z.snap),0);
+  if(S.assign.snap)out.push(`<span class="chip">Calage maxi : <b>${fmt(mx)}</b> cm</span>`);
+  if(S.view.lines)out.push(`<span class="chip">Bande phosphorescente : <b>${fmt(R.stripLen/100,2)}</b> m</span>`);
+  if(R.fibLit.length)out.push(`<span class="chip">Brin de fibre le plus long : <b>${fmt(R.fib.max,2)}</b> m</span>`);
+  if(S.table.show)out.push(`<span class="chip">Spots au-dessus de la table : <b>${R.overTable}</b> / ${R.spotLit.length}</span>`+tableChips());
+  $("stats").innerHTML=out.join("");
+  const w=[],pl=(n,a,b)=>n>1?b:a;
+  S.sizes.forEach((z,k)=>{if(R.used[k]>z.n)w.push(`${z.name} : ${R.used[k]} imposées pour ${z.n} disponibles.`);});
+  const noLight=R.stars.filter(z=>z.reason==="plus de lumière disponible"&&!z.free).length;
+  if(noLight)w.push(`${noLight} ${pl(noLight,"étoile","étoiles")} de constellation sans lumière faute de stock : ajoutez des spots ou des fibres.`);
+  const tp=R.stars.filter(z=>z.reason.startsWith("trop proche de")).length;
+  if(tp)w.push(`${tp} ${pl(tp,"étoile trop proche","étoiles trop proches")} d’une autre pour un second trou.`);
+  const nb=R.stars.filter(z=>z.reason==="trop près d’un mur").length;
+  if(nb)w.push(`${nb} ${pl(nb,"étoile trop près","étoiles trop près")} d’un mur pour un spot, et plus de fibre disponible.`);
+  const freeSp=S.sizes.reduce((a,z,k)=>a+(isFib(k)?0:Math.max(0,z.n-R.used[k])),0);
+  if(freeSp)w.push(S.assign.spotFill===false?`${freeSp} ${pl(freeSp,"ampoule n’a","ampoules n’ont")} pas d’étoile : cochez « Placer les ampoules sans étoile de constellation en étoiles de fond » (onglet Lumières) ou ajoutez une constellation.`:`${freeSp} ${pl(freeSp,"ampoule n’a","ampoules n’ont")} pas trouvé de place : réduisez la bande murale ou l’espace autour des spots.`);
+  if(R.fillShort)w.push(`${R.fillShort} ${pl(R.fillShort,"fibre de fond n’a","fibres de fond n’ont")} pas trouvé de place : élargissez la zone ou réduisez l’espacement.`);
+  const freeF=S.sizes.reduce((a,z,k)=>a+(isFib(k)?Math.max(0,z.n-R.used[k]):0),0);
+  if(freeF&&!R.fillShort)w.push(`${freeF} ${pl(freeF,"fibre non utilisée","fibres non utilisées")} : cochez « Utiliser toutes les fibres restantes » (onglet Constellations).`);
+  if(conf)w.push(`${conf} ${pl(conf,"trou","trous")} en conflit (cercle rouge) : déplacez la constellation ou cliquez l’étoile.`);
+  $("warn").innerHTML=w.map(esc).join("<br>");
+  $("fibInfo").innerHTML=R.fibLit.length?`${R.fibLit.length} brins. Le plus long : <b>${fmt(R.fib.max,2)} m</b>, total ${fmt(R.fib.total,0)} m.<br>Par longueur : ${R.fib.buckets.map((c,i)=>c?`${c} entre ${i} et ${i+1} m`:"").filter(Boolean).join(", ")}${R.fib.over?`, ${R.fib.over} au-delà de 5 m`:""}.<br>Projecteurs nécessaires : <b>${Math.ceil(R.fibLit.length/Math.max(1,S.fib.per))}</b> (${S.fib.per} brins chacun).`:"Aucune fibre posée.";
+  /* infos structure */
+  const bs=T.batt.length>1?T.batt[1]-T.batt[0]:0;
+  $("battInfo").textContent=`${T.batt.length} tasseaux, entraxe ${fmt(bs)} cm, vide entre deux tasseaux ${fmt(bs-S.batt.w)} cm.`;
+  $("panelInfo").textContent=`${T.joints.length+1} lames de ${fmt(T.jAxis==="x"?S.room.W:S.room.L)} cm de long, numérotées depuis le ${T.jAxis==="x"?"mur A":"mur B"}.`;
+  {const [wa,wb]=purlWalls();$("purlInfo").innerHTML=T.purl.length?T.purl.map((p,i)=>{const w=T.purlW[i],ea=p-w/2,eb=T.pLen-p-w/2;return `P${i+1} : bord à ${fmt(ea)} cm du ${esc(wa)} et ${fmt(eb)} cm du ${esc(wb)}, largeur ${fmt(w)} cm${ea<0||eb<0?" (hors du plafond : vérifiez la mesure)":""}`;}).join("<br>"):"Aucune panne.";}
+  $("cableInfo").innerHTML=R.spotLit.length?`Longueur estimée : <b>${fmt(R.cable.len/100,1)} m</b> pour ${R.spotLit.length} spots, mou compris.`:"Aucun spot posé.";
+  $("luxInfo").innerHTML=S.table.show?`Hauteur plafond-plateau : <b>${fmt(R.lux.h,2)} m</b><br>Moyenne sur la table : <b>${Math.round(R.lux.avg)} lux</b>, mini ${Math.round(R.lux.min)}, maxi ${Math.round(R.lux.max)}.`:"Affichez la table pour calculer l’éclairement.";
+}
+
+/* plan de perçage */
+function planRows(){
+  const dy=T.jAxis==="x";
+  return R.lit.map(st=>({no:st.no,name:st.name,cons:st.free?(isFib(st.size)?"Fond (fibre)":"Fond (ampoule)"):CAT[st.item.key].name.split(" :")[0],size:state.sizes[st.size].name,chn:(state.chans[st.ch]||{}).name||"",d:state.sizes[st.size].d,x:st.x,y:st.y,lame:st.lame.n,edge:st.lame.edge,along:st.lame.along,between:st.lame.between,snap:st.snap,conf:st.conf,dy}));
+}
+function planHeaders(){const dy=T.jAxis==="x";return ["N°","Étoile","Constellation","Type","Canal","Ø perçage (mm)","X depuis mur A (cm)","Y depuis mur B (cm)","Lame n°",dy?"Depuis le bord de lame côté mur A (cm)":"Depuis le bord de lame côté mur B (cm)",dy?"Le long de la lame depuis mur B (cm)":"Le long de la lame depuis mur A (cm)","Entre tasseaux","Calage (cm)","État"];}
+function renderPlan(){
+  if(!R)return;const rows=planRows(),h=planHeaders();
+  $("planNote").textContent=`${rows.length} trous, triés par lame. Les cotes sont prises au centre du trou, en vue de dessous (assis à table, tête levée). Repérez sur chaque lame l’extrémité côté ${T.jAxis==="x"?"mur B":"mur A"} avant de percer.`;
+  $("planTable").innerHTML=rows.length?`<table><thead><tr>${h.map(x=>`<th>${esc(x)}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr><td>${r.no}</td><td>${esc(r.name)}</td><td>${esc(r.cons)}</td><td>${esc(r.size)}</td><td>${esc(r.chn)}</td><td>${fmt(r.d*10,1)}</td><td>${fmt(r.x)}</td><td>${fmt(r.y)}</td><td>${r.lame}</td><td>${fmt(r.edge)}</td><td>${fmt(r.along)}</td><td>${r.between}</td><td>${fmt(r.snap)}</td><td class="${r.conf?"bad":"ok"}">${r.conf?esc(r.conf):"OK"}</td></tr>`).join("")}</tbody></table>`:`<p class="muted">Aucun trou : ajoutez une constellation et des lumières.</p>`;
+  $("matTable").innerHTML=`<table class="mat"><tbody>${materials().map(([a,b])=>`<tr><th>${esc(a)}</th><td>${esc(b)}</td></tr>`).join("")}</tbody></table>`;
+  renderSheets();
+}
+function materials(){
+  const S=state,nl=T.joints.length+1,lameLen=T.jAxis==="x"?S.room.W:S.room.L,battLen=T.bAxis==="y"?S.room.L:S.room.W;
+  const rows=[["Lames PVC",`${nl} lames de ${fmt(lameLen/100,2)} m, largeur utile ${fmt(S.panel.w)} cm ; prévoir une lame de plus pour les chutes`],
+    ["Tasseaux",`${T.batt.length} × ${fmt(battLen/100,2)} m, soit ${fmt(T.batt.length*battLen/100,1)} m linéaires`]];
+  S.sizes.forEach((z,k)=>rows.push([z.name,z.kind==="fibre"?`${R.used[k]} brins posés sur ${z.n}, fibre Ø ${fmt(z.core||1,2)} mm, foret Ø ${fmtD(z.d)}`:`${R.used[k]} à poser sur ${z.n} en stock${z.watt?`, ${fmt(z.watt,1)} W pièce`:""}, perçage Ø ${fmtD(z.d)}`]));
+  const diams=[...new Set(S.sizes.filter((z,k)=>R.used[k]>0).map(z=>fmtD(z.d)))];
+  if(diams.length)rows.push(["Scies cloches et forets",diams.map(d=>"Ø "+d).join(", ")]);
+  const pw=R.spotLit.reduce((a,z)=>a+(S.sizes[z.size].watt||0),0);
+  if(pw)rows.push(["Puissance des spots",`${fmt(pw,0)} W au total ; prévoir une ou plusieurs alimentations totalisant environ ${fmt(pw*1.25,0)} W (25 % de marge)`]);
+  if(R.fibLit.length)rows.push(["Fibre optique",`${R.fibLit.length} brins, le plus long ${fmt(R.fib.max,2)} m, ${Math.ceil(R.fibLit.length/Math.max(1,S.fib.per))} projecteur(s) de ${S.fib.per} brins${(()=>{const q=S.sizes.filter(z=>z.kind==="fibre").reduce((a,z)=>a+(z.pw||0),0);return q?`, ${fmt(q,0)} W de projecteur`:"";})()}`]);
+  S.chans.forEach((c,i)=>{const sp=R.spotLit.filter(z=>z.ch===i),fb=R.fibLit.filter(z=>z.ch===i);if(!sp.length&&!fb.length)return;const w=powerOf(sp,fb);
+    rows.push([c.name,`${sp.length} spot${sp.length>1?"s":""}${w?` (${fmt(w,0)} W)`:""}${fb.length?`, ${fb.length} fibres via leur projecteur (compris dans la puissance)`:""}${R.chCable[i]?`, câble ≈ ${fmt(R.chCable[i]/100,1)} m`:""} ; vérifiez la puissance admise par voie sur votre module`]);});
+  if(S.view.lines)rows.push(["Bande phosphorescente",`${fmt(R.stripLen/100,2)} m posés, ${fmt(R.stripLen*1.15/100,1)} m avec 15 % de marge, largeur ${fmt(S.view.strip)} cm`]);
+  if(R.spotLit.length)rows.push(["Câble des spots (estimation)",`${fmt(R.cable.len/100,1)} m depuis l’arrivée électrique, mou compris ; ajoutez 10 à 20 % de marge`]);
+  return rows;
+}
+function renderSheets(){
+  const S=state,lameLen=T.jAxis==="x"?S.room.W:S.room.L,bnd=[0,...T.joints,T.jLen],fs=Math.max(3.5,lameLen/55);
+  const along0=T.jAxis==="x"?"mur B":"mur A",edge0=T.jAxis==="x"?"mur A":"mur B";
+  const by={};R.lit.forEach(h=>{(by[h.lame.n]=by[h.lame.n]||[]).push(h);});
+  const html=Object.keys(by).map(Number).sort((a,b)=>a-b).map(n=>{
+    const holes=by[n],w=bnd[n]-bnd[n-1];
+    let svg=`<svg viewBox="-6 ${-fs*2} ${lameLen+12} ${w+fs*4.4}" role="img" aria-label="Lame ${n}"><rect x="0" y="0" width="${lameLen}" height="${w}" fill="#fff" stroke="#8C9AAB" stroke-width="0.4"/>`;
+    T.batt.forEach(p=>{svg+=`<rect x="${p-S.batt.w/2}" y="0" width="${S.batt.w}" height="${w}" fill="#C8955A" opacity="0.35"/>`;});
+    if(S.purl.use)T.purl.forEach((p,i)=>{const pw=T.purlW[i],a=Math.max(bnd[n-1],p-pw/2),b=Math.min(bnd[n],p+pw/2);if(b>a)svg+=`<rect x="0" y="${a-bnd[n-1]}" width="${lameLen}" height="${b-a}" fill="#7FA2C8" opacity="0.4"/>`;});
+    holes.forEach(h=>{const x=h.lame.along,y=h.lame.edge,r=h.r;
+      if(isFib(h.size)){svg+=`<circle cx="${x}" cy="${y}" r="${Math.max(r,0.45)}" fill="#2456A6"/><text x="${x+0.9}" y="${y-0.9}" font-size="${fs*0.55}" fill="#2456A6" font-family="Sora, sans-serif">${h.no}</text>`;return;}
+      svg+=`<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="#13233A" stroke-width="0.5"/><path d="M${x-r-1.5} ${y}H${x+r+1.5}M${x} ${y-r-1.5}V${y+r+1.5}" stroke="#13233A" stroke-width="0.3"/><text x="${x+r+1.2}" y="${y-r-0.6}" font-size="${fs}" fill="#13233A" font-family="Sora, sans-serif" font-weight="600">${h.no}</text>`;});
+    svg+=`<text x="0" y="${w+fs*1.6}" font-size="${fs*0.85}" fill="#5A6B80" font-family="Sora, sans-serif">0 = extrémité côté ${along0}</text><text x="${lameLen}" y="${w+fs*1.6}" font-size="${fs*0.85}" text-anchor="end" fill="#5A6B80" font-family="Sora, sans-serif">${fmt(lameLen,0)} cm</text></svg>`;
+    const li=holes.map(h=>`<li>Trou ${h.no} (${esc(h.name.replace(/ \(.*\)/,""))}) : Ø ${fmtD(S.sizes[h.size].d)}, à ${fmt(h.lame.along)} cm de l’extrémité côté ${along0} et ${fmt(h.lame.edge)} cm du bord côté ${edge0}</li>`).join("");
+    return `<div class="sheet"><h4>Lame ${n} : ${holes.length} trou${holes.length>1?"s":""}</h4>${svg}<ul>${li}</ul></div>`;
+  }).join("");
+  $("sheets").innerHTML=html||`<p class="muted">Aucune lame à percer pour l’instant.</p>`;
+}
+function csvText(){
+  const rows=planRows(),h=planHeaders();const q=s=>`"${String(s).replace(/"/g,'""')}"`;
+  return "\ufeff"+[h.map(q).join(";"),...rows.map(r=>[r.no,q(r.name),q(r.cons),q(r.size),q(r.chn),fmt(r.d*10,1),fmt(r.x),fmt(r.y),r.lame,fmt(r.edge),fmt(r.along),q(r.between),fmt(r.snap),q(r.conf||"OK")].join(";"))].join("\r\n");
+}
+
+/* téléchargements */
+let DL=null;
+(function initDL(n){if(window.claude&&typeof window.claude.use==="function"){window.claude.use("downloads").then(d=>{DL=d;}).catch(()=>{DL=null;});}else if(n<20)setTimeout(()=>initDL(n+1),300);})(0);
+function showDialog(html){$("dlgBody").innerHTML=html;try{$("dlg").showModal();}catch(e){$("dlg").setAttribute("open","");}}
+$("dlgClose").onclick=()=>{try{$("dlg").close();}catch(e){$("dlg").removeAttribute("open");}};
+const inClaude=()=>!!(window.claude&&typeof window.claude.use==="function");
+const MIME={csv:"text/csv;charset=utf-8",json:"application/json",html:"text/html;charset=utf-8",png:"image/png"};
+function anchorSave(filename,data){try{const blob=data instanceof Blob?data:new Blob([data],{type:MIME[filename.split(".").pop()]||"application/octet-stream"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;a.rel="noopener";document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},5000);return true;}catch(e){return false;}}
+async function offer(filename,data,fallbackHtml){
+  if(DL){try{await DL.save({filename,data});return;}catch(err){if(err&&err.code==="declined")return;}}
+  else if(!inClaude()&&anchorSave(filename,data))return;
+  showDialog(fallbackHtml());
+}
+$("csvBtn").onclick=()=>{const t=csvText();offer("plan-percage-plafond.csv",t,()=>`<p>Copiez ce tableau (séparateur point-virgule) dans un tableur :</p><textarea rows="12" style="width:100%">${esc(t)}</textarea>`);};
+$("pngBtn").onclick=()=>{cv.toBlob(b=>{if(!b)return;offer("plan-plafond-etoile.png",b,()=>`<p>Appui long ou clic droit sur l’image pour l’enregistrer :</p><img alt="Plan du plafond" src="${cv.toDataURL("image/png")}">`);},"image/png");};
+$("printBtn").onclick=()=>{renderPlan();try{window.print();}catch(e){$("planNote").textContent="L’impression n’est pas disponible ici : téléchargez le plan (.png) ou le tableau (.csv).";}};
+$("copyBtn").onclick=async()=>{const t=csvText().replace("\ufeff","");try{await navigator.clipboard.writeText(t);$("planNote").textContent="Tableau copié dans le presse-papiers.";}catch(e){showDialog(`<textarea rows="12" style="width:100%">${esc(t)}</textarea>`);}};
+$("jsonBtn").onclick=()=>{const t=JSON.stringify(state,null,1);offer("plafond-etoile-config.json",t,()=>`<textarea rows="12" style="width:100%">${esc(t)}</textarea>`);};
+$("htmlBtn").onclick=()=>{const st=clone(state);st.view.zoom=1;st.view.addFree=false;const h=buildHtml({rev:new Date().toISOString(),state:st});offer("plafond-etoile.html",h,()=>`<p>Le téléchargement n’est pas disponible dans cette vue. Copiez ce code dans un fichier nommé plafond-etoile.html :</p><textarea rows="10" style="width:100%">${esc(h)}</textarea>`);};
+$("jsonShow").onclick=()=>{$("jsonTxt").value=JSON.stringify(state);};
+function loadConfig(txt){try{let o=JSON.parse(txt);if(o&&o.state&&o.rev)o=o.state;state=migrate(merge(clone(DEFAULT),o));selKey=null;selItem=null;fullRefresh();$("saveMsg").textContent="Configuration chargée.";}catch(e){$("saveMsg").textContent="Texte illisible : vérifiez qu’il s’agit bien d’une configuration copiée depuis ce simulateur.";}}
+$("jsonLoad").onclick=()=>loadConfig($("jsonTxt").value);
+$("jsonFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>loadConfig(r.result);r.readAsText(f);};
+$("resetAll").onclick=()=>{state=clone(DEFAULT);selKey=null;selItem=null;autoArrange();optimize();fullRefresh();$("saveMsg").textContent="Réglages d’origine rétablis.";};
+
+/* version partagée */
+const HEAD='<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n<title>Plafond étoilé – simulateur</title>\n<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">';
+function buildHtml(seed){
+  const SC="<"+"/script>";
+  return "<!doctype html>\n<html lang=\"fr\">\n<head>\n"+HEAD+"\n<style id=\"appStyle\">"+PRISTINE.style+"</style>\n</head>\n<body>\n<div id=\"appRoot\">"+PRISTINE.root+"</div>\n<script id=\"seed\" type=\"application/json\">"+JSON.stringify(seed).replace(/</g,"\\u003c")+SC+"\n<script id=\"appScript\">"+PRISTINE.script+SC+"\n</body>\n</html>\n";
+}
+const frDate=r=>{try{return new Date(r).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"});}catch(e){return r;}};
+function renderShare(){
+  $("shareInfo").textContent=SEED&&SEED.rev?`Version partagée enregistrée le ${frDate(SEED.rev)}.${fromShared?" C’est elle qui est affichée.":" Vous voyez vos propres réglages, gardés sur cet appareil."}`:"Aucune version partagée pour l’instant : le lien ouvre les réglages d’origine.";
+  $("shareBack").hidden=!(SEED&&SEED.state);
+  $("sharePub").hidden=!inClaude();
+  if(!inClaude())$("shareMsg").textContent="Hors de Claude, l’enregistrement dans la page n’existe pas : utilisez « Télécharger le simulateur avec ces réglages » dans le cadre Configuration, puis transmettez ce fichier .html.";
+  if(SEED&&SEED.rev)$("subtitle").textContent=`Ciel réel vu de La Réunion, version partagée du ${frDate(SEED.rev).split(" à ")[0]}`;
+}
+let ART=null,artTried=false;
+async function getArt(){if(artTried)return ART;artTried=true;try{if(window.claude&&typeof window.claude.use==="function")ART=await window.claude.use("artifact");}catch(e){ART=null;}return ART;}
+$("sharePub").onclick=async()=>{
+  const msg=$("shareMsg");msg.textContent="Enregistrement…";const a=await getArt();
+  if(!a){msg.textContent="Enregistrement impossible dans cette vue : téléchargez le fichier .json pour transmettre la configuration.";return;}
+  const rev=new Date().toISOString(),st=clone(state);st.view.zoom=1;st.view.addFree=false;
+  const prev=baseRev;baseRev=rev;saveNow();
+  try{await a.publish(buildHtml({rev,state:st}));msg.textContent="Enregistré : la page se recharge sur cette version.";}
+  catch(err){baseRev=prev;saveNow();const c=err&&err.code;
+    if(c==="not_writer"||c==="not_granted"||c==="consent_required"||c==="capability_disabled"){msg.textContent="Cette vue est en lecture seule : vous pouvez tout essayer ici, et transmettre vos réglages en téléchargeant le fichier .json.";$("sharePub").disabled=true;}
+    else if(c==="conflict")msg.textContent="Une version plus récente vient d’être enregistrée ; la page se recharge dessus.";
+    else if(c==="rate_limited")msg.textContent="Trop d’enregistrements rapprochés : réessayez dans une minute.";
+    else msg.textContent="L’enregistrement n’a pas abouti ("+(c||"erreur inconnue")+"). Le fichier .json reste disponible.";}
+};
+$("shareBack").onclick=()=>{if(!(SEED&&SEED.state))return;state=migrate(merge(clone(DEFAULT),SEED.state));baseRev=SEED.rev;fromShared=true;selKey=null;selItem=null;fullRefresh();renderShare();};
+
+/* boucle */
+let raf=null;
+function update(light,noCommit){
+  compute();draw();
+  if(!light){renderStats();renderSel();if(document.querySelector('.panel[data-panel="plan"]').classList.contains("on"))renderPlan();if(document.querySelector('.panel[data-panel="chan"]').classList.contains("on"))renderChan();if(!noCommit)commitSoon();}
+  else{renderSel();}
+  saveSoon();
+}
+function fullRefresh(){syncBound();renderItems();renderSizes();update();renderPurl();}
+window.addEventListener("resize",()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>draw());});
+if(fresh){autoArrange();optimize();}
+fullRefresh();commit();renderShare();setTimeout(renderShare,1500);
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>draw());
+</script>
+</body>
+</html>
